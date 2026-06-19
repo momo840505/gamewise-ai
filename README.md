@@ -15,6 +15,7 @@ GameWise understands your budget, platform, review requirements, release year, p
 ![Tests](https://img.shields.io/badge/tests-16%20passed-2EA44F)
 ![Evaluation](https://img.shields.io/badge/evaluation-11%2F11%20passed-2EA44F)
 
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Open%20GameWise-FF4B4B?logo=streamlit&logoColor=white)](https://gamewise-ai.streamlit.app)
 <br>
 
 [Overview](#-overview) •
@@ -25,6 +26,18 @@ GameWise understands your budget, platform, review requirements, release year, p
 [Project Structure](#-project-structure)
 
 </div>
+
+---
+
+## 🌐 Live Demo
+
+Try GameWise AI directly in your browser:
+
+### [🎮 Open GameWise AI](https://gamewise-ai.streamlit.app)
+
+No local installation is required. Enter a natural-language game request to explore recommendations, clarification handling, shortlist features, and developer ranking details.
+
+> The first semantic search may take longer while the embedding model is loaded.
 
 ---
 
@@ -970,10 +983,10 @@ This avoids loading the Sentence Transformer model again for every search.
 - [x] Add search history and shortlist
 - [x] Add sorting and CSV export
 - [x] Add Developer mode
+- [x] Deploy the public Streamlit application
 
 ### Planned
 
-- [ ] Deploy the public Streamlit application
 - [ ] Retrieve live Steam prices and availability
 - [ ] Add multilingual query support
 - [ ] Add persistent user profiles
