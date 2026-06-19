@@ -309,12 +309,27 @@ def initialize_session_state() -> None:
         "search_history": [],
         "shortlist": [],
         "auto_submit": False,
+        "pending_toast": "",
     }
 
     for key, value in defaults.items():
         if key not in st.session_state:
             st.session_state[key] = value
 
+
+def display_pending_toast() -> None:
+    """Display a saved notification after Streamlit reruns."""
+
+    message = st.session_state.pop(
+        "pending_toast",
+        "",
+    )
+
+    if message:
+        st.toast(
+            message,
+            icon="💜",
+        )
 
 def select_example_query(query: str) -> None:
     """Insert an example query and run it automatically."""
@@ -378,7 +393,7 @@ def add_to_shortlist(
     game_name: str,
     steam_url: str,
 ) -> None:
-    """Save one recommendation to the shortlist."""
+    """Save one recommendation and refresh the interface."""
 
     shortlist = list(
         st.session_state.get(
@@ -393,11 +408,11 @@ def add_to_shortlist(
     )
 
     if already_saved:
-        st.toast(
-            f"{game_name} is already saved.",
-            icon="✅",
+        st.session_state["pending_toast"] = (
+            f"{game_name} is already in your shortlist."
         )
-        return
+
+        st.rerun()
 
     shortlist.append(
         {
@@ -408,11 +423,11 @@ def add_to_shortlist(
 
     st.session_state["shortlist"] = shortlist
 
-    st.toast(
-        f"{game_name} added to your shortlist.",
-        icon="💜",
+    st.session_state["pending_toast"] = (
+        f"{game_name} was added to your shortlist."
     )
 
+    st.rerun()
 
 @st.cache_data(show_spinner=False)
 def run_cached_search(
@@ -1752,6 +1767,7 @@ def main() -> None:
 
     initialize_session_state()
     apply_page_style()
+    display_pending_toast()
 
     generate_summary, developer_mode = (
         display_sidebar()
@@ -1819,6 +1835,7 @@ def main() -> None:
             add_to_search_history(
                 query
             )
+            st.rerun()
 
     if (
         "search_payload"

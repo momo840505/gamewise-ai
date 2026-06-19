@@ -1,0 +1,121 @@
+[
+  {
+    "case_id": "cooperative_survival",
+    "query": "a cooperative survival game under $20 with at least 80% positive reviews",
+    "top_k": 5,
+    "expected_behavior": "results",
+    "relevance_terms": [
+      "survival",
+      "open world survival craft",
+      "survival horror"
+    ]
+  },
+  {
+    "case_id": "relaxing_single_player",
+    "query": "a relaxing single-player casual game under $15",
+    "top_k": 5,
+    "expected_behavior": "results",
+    "relevance_terms": [
+      "relaxing",
+      "cozy",
+      "wholesome",
+      "casual"
+    ]
+  },
+  {
+    "case_id": "free_psychological_horror",
+    "query": "a free psychological horror game",
+    "top_k": 5,
+    "expected_behavior": "results",
+    "relevance_terms": [
+      "psychological horror"
+    ]
+  },
+  {
+    "case_id": "linux_tactical_strategy",
+    "query": "a turn-based tactical strategy game under $20 for Linux",
+    "top_k": 5,
+    "expected_behavior": "results",
+    "relevance_terms": [
+      "turn-based strategy",
+      "turn-based tactics",
+      "tactical",
+      "strategy"
+    ]
+  },
+  {
+    "case_id": "recent_coop_adventure",
+    "query": "a co-op adventure game under $25 released after 2020",
+    "top_k": 5,
+    "expected_behavior": "results",
+    "relevance_terms": [
+      "adventure",
+      "action-adventure",
+      "exploration",
+      "co-op campaign"
+    ]
+  },
+  {
+    "case_id": "story_rich_rpg",
+    "query": "a story-rich RPG with at least 90% positive reviews",
+    "top_k": 5,
+    "expected_behavior": "results",
+    "relevance_terms": [
+      "story rich",
+      "narrative",
+      "rpg",
+      "role-playing",
+      "jrpg",
+      "action rpg"
+    ]
+  },
+  {
+    "case_id": "windows_racing",
+    "query": "a racing game for Windows under $15",
+    "top_k": 5,
+    "expected_behavior": "results",
+    "relevance_terms": [
+      "racing",
+      "driving",
+      "automobile sim"
+    ]
+  },
+  {
+    "case_id": "mac_farming",
+    "query": "a farming simulation game for Mac",
+    "top_k": 5,
+    "expected_behavior": "results",
+    "relevance_terms": [
+      "farming",
+      "farming sim",
+      "agriculture",
+      "life sim"
+    ]
+  },
+  {
+    "case_id": "recent_multiplayer_shooter",
+    "query": "a multiplayer shooter released after 2022",
+    "top_k": 5,
+    "expected_behavior": "results",
+    "relevance_terms": [
+      "shooter",
+      "fps",
+      "first-person shooter",
+      "third-person shooter"
+    ]
+  },
+  {
+    "case_id": "broad_price_only",
+    "query": "a game under $20",
+    "top_k": 5,
+    "expected_behavior": "clarification",
+    "relevance_terms": []
+  },
+  {
+    "case_id": "impossible_conditions",
+    "query": "a free co-op game for Mac with at least 99% positive reviews released after 2025",
+    "top_k": 5,
+    "expected_behavior": "no_results",
+    "relevance_terms": []
+  }
+]

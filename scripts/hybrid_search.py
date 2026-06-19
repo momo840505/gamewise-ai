@@ -1,23 +1,33 @@
-from pathlib import Path
+from __future__ import annotations
+
 import argparse
 import re
+from functools import lru_cache
+from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pandas as pd
 from sentence_transformers import SentenceTransformer
 
 
-EMBEDDINGS_PATH = Path(
-    "data/processed/game_embeddings.npy"
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
+EMBEDDINGS_PATH = (
+    PROJECT_ROOT
+    / "data"
+    / "processed"
+    / "game_embeddings.npy"
 )
 
-EMBEDDING_INDEX_PATH = Path(
-    "data/processed/game_embedding_index.csv"
+EMBEDDING_INDEX_PATH = (
+    PROJECT_ROOT
+    / "data"
+    / "processed"
+    / "game_embedding_index.csv"
 )
 
-MODEL_NAME = (
-    "sentence-transformers/all-MiniLM-L6-v2"
-)
+MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 
 
 INVALID_GAME_NAMES = {
@@ -34,289 +44,335 @@ INVALID_GAME_NAMES = {
 }
 
 
-CONCEPT_RULES = {
-    "psychological horror": {
-        "query_terms": [
-            "psychological horror",
-            "psychological scary",
-        ],
-        "metadata_terms": {
-            "psychological horror": 1.00,
-            "psychological": 0.65,
-            "survival horror": 0.35,
-            "horror": 0.25,
-            "dark": 0.10,
-        },
-    },
-    "horror": {
-        "query_terms": [
-            "horror",
-            "scary",
-            "creepy",
-            "frightening",
-        ],
-        "metadata_terms": {
-            "horror": 1.00,
-            "survival horror": 0.90,
-            "psychological horror": 0.90,
-            "dark": 0.30,
-            "atmospheric": 0.20,
-        },
-    },
+CONCEPT_GROUPS: dict[str, dict[str, float]] = {
     "relaxing": {
-        "query_terms": [
-            "relaxing",
-            "cozy",
-            "peaceful",
-            "calming",
-            "wholesome",
-        ],
-        "metadata_terms": {
-            "relaxing": 1.00,
-            "cozy": 0.95,
-            "wholesome": 0.85,
-            "peaceful": 0.80,
-            "family friendly": 0.45,
-            "casual": 0.35,
-            "atmospheric": 0.20,
-        },
+        "relaxing": 1.00,
+        "cozy": 1.00,
+        "wholesome": 0.90,
+        "family friendly": 0.70,
+        "casual": 0.60,
+        "atmospheric": 0.35,
     },
     "casual": {
-        "query_terms": [
-            "casual",
-            "easy game",
-        ],
-        "metadata_terms": {
-            "casual": 1.00,
-            "family friendly": 0.60,
-            "relaxing": 0.50,
-        },
+        "casual": 1.00,
+        "relaxing": 0.75,
+        "cozy": 0.75,
+        "family friendly": 0.65,
+        "wholesome": 0.65,
+    },
+    "psychological horror": {
+        "psychological horror": 1.00,
+        "psychological": 0.75,
+        "survival horror": 0.75,
+        "horror": 0.65,
+        "dark": 0.35,
+        "atmospheric": 0.30,
     },
     "survival": {
-        "query_terms": [
-            "survival",
-            "survive",
-        ],
-        "metadata_terms": {
-            "survival": 1.00,
-            "open world survival craft": 1.00,
-            "survival horror": 0.75,
-            "crafting": 0.55,
-            "base-building": 0.50,
-        },
+        "survival": 1.00,
+        "open world survival craft": 1.00,
+        "survival horror": 0.85,
+        "base building": 0.55,
+        "crafting": 0.55,
+        "resource management": 0.45,
     },
     "open world": {
-        "query_terms": [
-            "open world",
-            "open-world",
-            "sandbox world",
-        ],
-        "metadata_terms": {
-            "open world": 1.00,
-            "open world survival craft": 1.00,
-            "sandbox": 0.75,
-            "exploration": 0.45,
-        },
+        "open world": 1.00,
+        "sandbox": 0.80,
+        "exploration": 0.70,
     },
     "turn-based": {
-        "query_terms": [
-            "turn-based",
-            "turn based",
-        ],
-        "metadata_terms": {
-            "turn-based": 1.00,
-            "turn-based strategy": 1.00,
-            "turn-based tactics": 1.00,
-            "turn-based combat": 1.00,
-        },
+        "turn based": 1.00,
+        "turn based strategy": 1.00,
+        "turn based tactics": 1.00,
+        "turn based combat": 1.00,
     },
     "tactical": {
-        "query_terms": [
-            "tactical",
-            "tactics",
-        ],
-        "metadata_terms": {
-            "tactical": 1.00,
-            "turn-based tactics": 1.00,
-            "tactical rpg": 0.95,
-            "real time tactics": 0.80,
-        },
+        "tactical": 1.00,
+        "tactical rpg": 1.00,
+        "turn based tactics": 1.00,
+        "real time tactics": 0.90,
+        "team based": 0.45,
     },
     "strategy": {
-        "query_terms": [
-            "strategy",
-            "strategic",
-        ],
-        "metadata_terms": {
-            "strategy": 1.00,
-            "turn-based strategy": 1.00,
-            "grand strategy": 0.90,
-            "real time strategy": 0.90,
-            "4x": 0.80,
-            "wargame": 0.75,
-        },
+        "strategy": 1.00,
+        "grand strategy": 1.00,
+        "4x": 1.00,
+        "wargame": 0.90,
+        "real time strategy": 1.00,
+        "turn based strategy": 1.00,
     },
     "adventure": {
-        "query_terms": [
-            "adventure",
-            "adventurous",
-        ],
-        "metadata_terms": {
-            "adventure": 1.00,
-            "action-adventure": 0.90,
-            "exploration": 0.65,
-            "story rich": 0.45,
-        },
+        "adventure": 1.00,
+        "action adventure": 1.00,
+        "exploration": 0.75,
+        "story rich": 0.65,
+        "point and click": 0.65,
     },
     "puzzle": {
-        "query_terms": [
-            "puzzle",
-            "logic game",
-            "escape room",
-        ],
-        "metadata_terms": {
-            "puzzle": 1.00,
-            "logic": 0.80,
-            "escape room": 0.90,
-            "mystery": 0.45,
-            "hidden object": 0.35,
-        },
+        "puzzle": 1.00,
+        "logic": 0.85,
+        "escape room": 0.85,
+        "mystery": 0.65,
     },
     "farming": {
-        "query_terms": [
-            "farming",
-            "farm game",
-            "agriculture",
-        ],
-        "metadata_terms": {
-            "farming": 1.00,
-            "farming sim": 1.00,
-            "agriculture": 0.80,
-            "life sim": 0.65,
-            "simulation": 0.30,
-        },
-    },
-    "story rich": {
-        "query_terms": [
-            "story rich",
-            "story-rich",
-            "story driven",
-            "story-driven",
-            "narrative",
-        ],
-        "metadata_terms": {
-            "story rich": 1.00,
-            "narrative": 0.90,
-            "choices matter": 0.75,
-            "interactive fiction": 0.60,
-        },
-    },
-    "role-playing": {
-        "query_terms": [
-            "rpg",
-            "role-playing",
-            "role playing",
-        ],
-        "metadata_terms": {
-            "rpg": 1.00,
-            "role-playing": 1.00,
-            "action rpg": 0.95,
-            "jrpg": 0.95,
-            "strategy rpg": 0.90,
-        },
+        "farming": 1.00,
+        "farming sim": 1.00,
+        "agriculture": 0.90,
+        "life sim": 0.75,
     },
     "simulation": {
-        "query_terms": [
-            "simulation",
-            "simulator",
-            "sim game",
-        ],
-        "metadata_terms": {
-            "simulation": 1.00,
-            "simulator": 1.00,
-            "life sim": 0.85,
-            "management": 0.50,
-        },
+        "simulation": 1.00,
+        "simulator": 1.00,
+        "life sim": 0.80,
+        "management": 0.65,
     },
-    "shooter": {
-        "query_terms": [
-            "shooter",
-            "shooting",
-            "fps",
-        ],
-        "metadata_terms": {
-            "shooter": 1.00,
-            "fps": 1.00,
-            "first-person shooter": 1.00,
-            "third-person shooter": 0.90,
-        },
+    "story rich": {
+        "story rich": 1.00,
+        "narrative": 0.90,
+        "choices matter": 0.85,
+        "multiple endings": 0.70,
+    },
+    "rpg": {
+        "rpg": 1.00,
+        "role playing": 1.00,
+        "action rpg": 1.00,
+        "jrpg": 1.00,
+        "crpg": 1.00,
+        "tactical rpg": 1.00,
     },
     "racing": {
-        "query_terms": [
-            "racing",
-            "race game",
-            "driving game",
-        ],
-        "metadata_terms": {
-            "racing": 1.00,
-            "driving": 0.80,
-            "automobile sim": 0.75,
-        },
+        "racing": 1.00,
+        "driving": 0.85,
+        "automobile sim": 0.85,
+        "arcade racing": 1.00,
     },
-    "sports": {
-        "query_terms": [
-            "sports",
-            "sport game",
-        ],
-        "metadata_terms": {
-            "sports": 1.00,
-            "football": 0.80,
-            "basketball": 0.80,
-            "soccer": 0.80,
-            "golf": 0.70,
-        },
+    "shooter": {
+        "shooter": 1.00,
+        "fps": 1.00,
+        "first person shooter": 1.00,
+        "third person shooter": 1.00,
     },
 }
 
 
-def build_valid_game_name_mask(
-    game_names: pd.Series,
-) -> pd.Series:
-    """Return True only for usable game names."""
+CONCEPT_TRIGGER_TERMS: dict[str, list[str]] = {
+    "relaxing": [
+        "relaxing",
+        "cozy",
+        "wholesome",
+    ],
+    "casual": [
+        "casual",
+    ],
+    "psychological horror": [
+        "psychological horror",
+        "psychological-horror",
+    ],
+    "survival": [
+        "survival",
+        "survival game",
+        "open world survival craft",
+    ],
+    "open world": [
+        "open world",
+        "open-world",
+    ],
+    "turn-based": [
+        "turn based",
+        "turn-based",
+        "turn based strategy",
+        "turn-based strategy",
+        "turn based tactics",
+        "turn-based tactics",
+    ],
+    "tactical": [
+        "tactical",
+        "tactics",
+    ],
+    "strategy": [
+        "strategy",
+        "strategic",
+        "4x",
+        "wargame",
+    ],
+    "adventure": [
+        "adventure",
+        "action adventure",
+        "action-adventure",
+    ],
+    "puzzle": [
+        "puzzle",
+        "logic game",
+        "escape room",
+    ],
+    "farming": [
+        "farming",
+        "farm game",
+        "agriculture",
+    ],
+    "simulation": [
+        "simulation",
+        "simulator",
+        "sim game",
+    ],
+    "story rich": [
+        "story rich",
+        "story-rich",
+        "narrative",
+        "choices matter",
+    ],
+    "rpg": [
+        "rpg",
+        "role playing",
+        "role-playing",
+        "jrpg",
+        "crpg",
+    ],
+    "racing": [
+        "racing",
+        "driving game",
+        "car game",
+    ],
+    "shooter": [
+        "shooter",
+        "fps",
+        "first person shooter",
+        "first-person shooter",
+        "third person shooter",
+        "third-person shooter",
+    ],
+}
 
-    normalized_game_names = (
-        game_names.astype("string")
-        .fillna("")
-        .str.strip()
-        .str.casefold()
+
+def normalize_text(value: Any) -> str:
+    """Normalize text for phrase matching."""
+
+    if value is None:
+        return ""
+
+    try:
+        if pd.isna(value):
+            return ""
+    except (TypeError, ValueError):
+        pass
+
+    normalized_value = str(value).casefold()
+
+    normalized_value = re.sub(
+        r"[-_/]+",
+        " ",
+        normalized_value,
     )
 
-    return ~normalized_game_names.isin(
-        INVALID_GAME_NAMES
+    normalized_value = re.sub(
+        r"[^a-z0-9+]+",
+        " ",
+        normalized_value,
+    )
+
+    normalized_value = re.sub(
+        r"\s+",
+        " ",
+        normalized_value,
+    ).strip()
+
+    return normalized_value
+
+
+def contains_normalized_term(
+    text: str,
+    term: str,
+) -> bool:
+    """Check for a normalized whole phrase."""
+
+    normalized_text = (
+        f" {normalize_text(text)} "
+    )
+
+    normalized_term = normalize_text(
+        term
+    )
+
+    if not normalized_term:
+        return False
+
+    return (
+        f" {normalized_term} "
+        in normalized_text
+    )
+
+
+def is_valid_game_name(
+    value: Any,
+) -> bool:
+    """Return True only for usable game titles."""
+
+    if value is None:
+        return False
+
+    try:
+        if pd.isna(value):
+            return False
+    except (TypeError, ValueError):
+        pass
+
+    normalized_name = (
+        str(value)
+        .strip()
+        .casefold()
+    )
+
+    return (
+        normalized_name
+        not in INVALID_GAME_NAMES
     )
 
 
 def filter_invalid_game_names(
     embeddings: np.ndarray,
     game_dataframe: pd.DataFrame,
-) -> tuple[np.ndarray, pd.DataFrame]:
-    """Remove invalid names while preserving vector-row alignment."""
+) -> tuple[
+    np.ndarray,
+    pd.DataFrame,
+]:
+    """
+    Remove invalid titles while preserving alignment.
 
-    valid_name_mask = build_valid_game_name_mask(
+    The same Boolean mask is applied to both embeddings
+    and dataframe rows.
+    """
+
+    if len(embeddings) != len(
+        game_dataframe
+    ):
+        raise ValueError(
+            "Embedding count does not match "
+            "the dataframe row count."
+        )
+
+    if "name" not in game_dataframe.columns:
+        raise ValueError(
+            "The dataframe must contain "
+            "a 'name' column."
+        )
+
+    valid_title_mask = (
         game_dataframe["name"]
+        .map(is_valid_game_name)
+        .to_numpy(dtype=bool)
     )
 
-    valid_positions = np.flatnonzero(
-        valid_name_mask.to_numpy()
-    )
-
-    filtered_embeddings = embeddings[
-        valid_positions
+    filtered_embeddings = np.asarray(
+        embeddings,
+        dtype=np.float32,
+    )[
+        valid_title_mask
     ]
 
     filtered_dataframe = (
-        game_dataframe.iloc[
-            valid_positions
+        game_dataframe.loc[
+            valid_title_mask
         ]
         .copy()
         .reset_index(drop=True)
@@ -328,11 +384,46 @@ def filter_invalid_game_names(
     )
 
 
+def is_free_value(
+    value: Any,
+) -> bool:
+    """Convert common free values into a Boolean."""
+
+    if isinstance(value, bool):
+        return value
+
+    if value is None:
+        return False
+
+    try:
+        if pd.isna(value):
+            return False
+    except (TypeError, ValueError):
+        pass
+
+    normalized_value = (
+        str(value)
+        .strip()
+        .casefold()
+    )
+
+    return normalized_value in {
+        "true",
+        "1",
+        "yes",
+        "y",
+        "free",
+        "free to play",
+        "free-to-play",
+    }
+
+
+@lru_cache(maxsize=1)
 def load_search_data() -> tuple[
     np.ndarray,
     pd.DataFrame,
 ]:
-    """Load embeddings and their matching game metadata."""
+    """Load and cache embeddings and metadata."""
 
     if not EMBEDDINGS_PATH.exists():
         raise FileNotFoundError(
@@ -352,19 +443,67 @@ def load_search_data() -> tuple[
 
     game_dataframe = pd.read_csv(
         EMBEDDING_INDEX_PATH
-    ).reset_index(drop=True)
+    ).reset_index(
+        drop=True
+    )
 
     if len(embeddings) != len(
         game_dataframe
     ):
         raise ValueError(
-            "The number of embeddings does not match "
-            "the number of game records."
+            "Embedding count does not match "
+            "the metadata row count."
         )
 
-    return filter_invalid_game_names(
+    (
         embeddings,
         game_dataframe,
+    ) = filter_invalid_game_names(
+        embeddings,
+        game_dataframe,
+    )
+
+    duplicate_mask = (
+        game_dataframe["name"]
+        .astype(str)
+        .str.strip()
+        .str.casefold()
+        .duplicated(keep="first")
+        .to_numpy(dtype=bool)
+    )
+
+    if duplicate_mask.any():
+        keep_mask = ~duplicate_mask
+
+        embeddings = embeddings[
+            keep_mask
+        ]
+
+        game_dataframe = (
+            game_dataframe.loc[
+                keep_mask
+            ]
+            .copy()
+            .reset_index(drop=True)
+        )
+
+    embeddings = np.asarray(
+        embeddings,
+        dtype=np.float32,
+    )
+
+    return (
+        embeddings,
+        game_dataframe,
+    )
+
+
+@lru_cache(maxsize=1)
+def load_embedding_model() -> SentenceTransformer:
+    """Load the embedding model once per process."""
+
+    return SentenceTransformer(
+        MODEL_NAME
     )
 
 
@@ -372,7 +511,7 @@ def extract_number(
     query: str,
     patterns: list[str],
 ) -> float | None:
-    """Extract the first number matching the supplied patterns."""
+    """Return the first matching number."""
 
     for pattern in patterns:
         match = re.search(
@@ -392,9 +531,11 @@ def extract_number(
 def extract_filters(
     query: str,
 ) -> dict[str, object]:
-    """Extract hard constraints from a natural-language query."""
+    """Extract hard constraints from a query."""
 
-    normalized_query = query.lower()
+    normalized_query = (
+        query.casefold()
+    )
 
     filters: dict[str, object] = {}
 
@@ -410,7 +551,7 @@ def extract_filters(
             (
                 r"(?:usd\s*)?\$?\s*"
                 r"(\d+(?:\.\d+)?)"
-                r"\s*(?:or less|maximum|max)"
+                r"\s*(?:or less|or under|maximum|max)"
             ),
         ],
     )
@@ -430,15 +571,20 @@ def extract_filters(
                     r"(?:\s*positive)?"
                 ),
                 (
-                    r"(?:positive reviews?|rating)"
-                    r"\s*(?:of|above|over|at least)?"
+                    r"(?:positive reviews?|"
+                    r"positive rating|rating)"
+                    r"\s*(?:of|above|over|"
+                    r"at least|minimum)?"
                     r"\s*(\d+(?:\.\d+)?)\s*%"
                 ),
             ],
         )
     )
 
-    if minimum_review_percentage is not None:
+    if (
+        minimum_review_percentage
+        is not None
+    ):
         filters[
             "minimum_review_percentage"
         ] = minimum_review_percentage
@@ -466,6 +612,11 @@ def extract_filters(
             (
                 r"(?:released\s+)?since\s+"
                 r"(19\d{2}|20\d{2})"
+            ),
+            (
+                r"(?:released\s+)?from\s+"
+                r"(19\d{2}|20\d{2})"
+                r"\s+onwards?"
             ),
         ],
     )
@@ -557,18 +708,73 @@ def extract_filters(
 def convert_to_boolean(
     series: pd.Series,
 ) -> pd.Series:
-    """Convert Boolean-looking values into Boolean values."""
+    """Convert Boolean-looking values."""
 
     if pd.api.types.is_bool_dtype(
         series
     ):
-        return series
+        return series.fillna(
+            False
+        )
 
     return (
-        series.astype(str)
+        series.fillna("")
+        .astype(str)
         .str.strip()
-        .str.lower()
-        .eq("true")
+        .str.casefold()
+        .isin(
+            {
+                "true",
+                "1",
+                "yes",
+                "y",
+                "free",
+                "free to play",
+                "free-to-play",
+            }
+        )
+    )
+
+
+def get_optional_text_column(
+    dataframe: pd.DataFrame,
+    column_name: str,
+) -> pd.Series:
+    """
+    Return a column or an aligned empty column.
+
+    This lets tests use a smaller DataFrame without
+    production-only metadata such as categories.
+    """
+
+    if column_name in dataframe.columns:
+        return dataframe[
+            column_name
+        ]
+
+    return pd.Series(
+        "",
+        index=dataframe.index,
+        dtype="object",
+    )
+
+
+def category_contains(
+    category_series: pd.Series,
+    pattern: str,
+) -> pd.Series:
+    """Search official Steam category text."""
+
+    return (
+        category_series
+        .fillna("")
+        .astype(str)
+        .str.contains(
+            pattern,
+            case=False,
+            regex=True,
+            na=False,
+        )
     )
 
 
@@ -576,37 +782,31 @@ def apply_filters(
     game_dataframe: pd.DataFrame,
     filters: dict[str, object],
 ) -> pd.Series:
-    """Apply all hard constraints to the game records."""
+    """Apply all requested hard constraints."""
 
     result_mask = pd.Series(
         True,
         index=game_dataframe.index,
-    )
-
-    prices = pd.to_numeric(
-        game_dataframe["price_usd"],
-        errors="coerce",
-    )
-
-    review_percentages = pd.to_numeric(
-        game_dataframe[
-            "positive_review_percentage"
-        ],
-        errors="coerce",
-    )
-
-    release_years = pd.to_numeric(
-        game_dataframe["release_year"],
-        errors="coerce",
+        dtype=bool,
     )
 
     if "maximum_price" in filters:
+        prices = pd.to_numeric(
+            game_dataframe[
+                "price_usd"
+            ],
+            errors="coerce",
+        )
+
         result_mask &= (
-            prices
-            <= float(
-                filters[
-                    "maximum_price"
-                ]
+            prices.notna()
+            & (
+                prices
+                <= float(
+                    filters[
+                        "maximum_price"
+                    ]
+                )
             )
         )
 
@@ -614,24 +814,46 @@ def apply_filters(
         "minimum_review_percentage"
         in filters
     ):
+        review_percentages = (
+            pd.to_numeric(
+                game_dataframe[
+                    "positive_review_percentage"
+                ],
+                errors="coerce",
+            )
+        )
+
         result_mask &= (
-            review_percentages
-            >= float(
-                filters[
-                    "minimum_review_percentage"
+            review_percentages.notna()
+            & (
+                review_percentages
+                >= float(
+                    filters[
+                        "minimum_review_percentage"
+                    ]
+                )
+            )
+        )
+
+    if filters.get(
+        "is_free"
+    ) is True:
+        free_game_mask = (
+            convert_to_boolean(
+                game_dataframe[
+                    "is_free"
                 ]
             )
         )
 
-    if filters.get("is_free") is True:
-        free_game_mask = (
-            convert_to_boolean(
-                game_dataframe["is_free"]
-            )
-        )
-
         zero_price_mask = (
-            prices.fillna(np.inf)
+            pd.to_numeric(
+                game_dataframe[
+                    "price_usd"
+                ],
+                errors="coerce",
+            )
+            .fillna(np.inf)
             == 0
         )
 
@@ -641,93 +863,131 @@ def apply_filters(
         )
 
     if "platform" in filters:
-        platform_name = str(
+        requested_platform = str(
             filters["platform"]
         )
 
         result_mask &= (
-            game_dataframe["platforms"]
+            game_dataframe[
+                "platforms"
+            ]
             .fillna("")
             .astype(str)
             .str.contains(
-                platform_name,
+                requested_platform,
                 case=False,
                 regex=False,
+                na=False,
             )
         )
 
-    if "release_year_after" in filters:
+    release_years = pd.to_numeric(
+        game_dataframe[
+            "release_year"
+        ],
+        errors="coerce",
+    )
+
+    if (
+        "release_year_after"
+        in filters
+    ):
         result_mask &= (
-            release_years
-            > int(
-                filters[
-                    "release_year_after"
-                ]
+            release_years.notna()
+            & (
+                release_years
+                > int(
+                    filters[
+                        "release_year_after"
+                    ]
+                )
             )
         )
 
-    if "release_year_since" in filters:
+    if (
+        "release_year_since"
+        in filters
+    ):
         result_mask &= (
-            release_years
-            >= int(
-                filters[
-                    "release_year_since"
-                ]
+            release_years.notna()
+            & (
+                release_years
+                >= int(
+                    filters[
+                        "release_year_since"
+                    ]
+                )
             )
         )
 
-    if "release_year_before" in filters:
+    if (
+        "release_year_before"
+        in filters
+    ):
         result_mask &= (
-            release_years
-            < int(
-                filters[
-                    "release_year_before"
-                ]
+            release_years.notna()
+            & (
+                release_years
+                < int(
+                    filters[
+                        "release_year_before"
+                    ]
+                )
             )
         )
 
     if "play_mode" in filters:
-        category_text = (
-            game_dataframe["categories"]
-            .fillna("")
-            .astype(str)
+        categories = (
+            get_optional_text_column(
+                game_dataframe,
+                "categories",
+            )
         )
 
-        requested_play_mode = filters[
-            "play_mode"
-        ]
+        requested_play_mode = str(
+            filters["play_mode"]
+        )
 
         if (
             requested_play_mode
             == "single-player"
         ):
             play_mode_mask = (
-                category_text.str.contains(
+                category_contains(
+                    categories,
                     r"single[- ]?player",
-                    case=False,
-                    regex=True,
                 )
             )
 
-        elif requested_play_mode == "co-op":
+        elif (
+            requested_play_mode
+            == "co-op"
+        ):
             play_mode_mask = (
-                category_text.str.contains(
-                    r"co[- ]?op|coop|cooperative",
-                    case=False,
-                    regex=True,
+                category_contains(
+                    categories,
+                    (
+                        r"co[- ]?op|"
+                        r"coop|"
+                        r"cooperative"
+                    ),
                 )
             )
 
         else:
             play_mode_mask = (
-                category_text.str.contains(
-                    r"multi[- ]?player",
-                    case=False,
-                    regex=True,
+                category_contains(
+                    categories,
+                    (
+                        r"multi[- ]?player|"
+                        r"cross[- ]platform multiplayer"
+                    ),
                 )
             )
 
-        result_mask &= play_mode_mask
+        result_mask &= (
+            play_mode_mask
+        )
 
     return result_mask
 
@@ -735,38 +995,29 @@ def apply_filters(
 def detect_requested_concepts(
     query: str,
 ) -> list[str]:
-    """Identify concepts explicitly requested by the user."""
+    """Detect explicitly requested concepts."""
 
-    normalized_query = query.lower()
-
-    requested_concepts = []
-
-    psychological_horror_requested = any(
-        query_term in normalized_query
-        for query_term in CONCEPT_RULES[
-            "psychological horror"
-        ]["query_terms"]
+    normalized_query = normalize_text(
+        query
     )
+
+    requested_concepts: list[str] = []
 
     for (
         concept_name,
-        concept_rule,
-    ) in CONCEPT_RULES.items():
+        trigger_terms,
+    ) in CONCEPT_TRIGGER_TERMS.items():
 
-        if (
-            concept_name == "horror"
-            and psychological_horror_requested
-        ):
-            continue
-
-        concept_requested = any(
-            query_term in normalized_query
-            for query_term in concept_rule[
-                "query_terms"
-            ]
+        has_trigger = any(
+            contains_normalized_term(
+                normalized_query,
+                trigger_term,
+            )
+            for trigger_term
+            in trigger_terms
         )
 
-        if concept_requested:
+        if has_trigger:
             requested_concepts.append(
                 concept_name
             )
@@ -774,117 +1025,53 @@ def detect_requested_concepts(
     return requested_concepts
 
 
-def build_term_pattern(
-    term: str,
-) -> str:
-    """Create a pattern that avoids partial-word matches."""
+def normalize_series(
+    series: pd.Series,
+) -> pd.Series:
+    """Normalize a text column."""
 
-    escaped_term = re.escape(
+    return (
+        series.fillna("")
+        .astype(str)
+        .map(normalize_text)
+        .map(
+            lambda value: (
+                f" {value} "
+            )
+        )
+    )
+
+
+def term_match_mask(
+    normalized_series: pd.Series,
+    term: str,
+) -> np.ndarray:
+    """Return phrase-match Boolean values."""
+
+    normalized_term = normalize_text(
         term
     )
 
+    if not normalized_term:
+        return np.zeros(
+            len(normalized_series),
+            dtype=bool,
+        )
+
+    search_term = (
+        f" {normalized_term} "
+    )
+
     return (
-        rf"(?<!\w){escaped_term}(?!\w)"
-    )
-
-
-def calculate_single_concept_score(
-    strong_metadata: pd.Series,
-    description_text: pd.Series,
-    concept_name: str,
-) -> np.ndarray:
-    """
-    Calculate field-aware matches for one concept.
-
-    Genres and tags are strong evidence.
-    Descriptions are weaker evidence because they can contain
-    incidental words such as 'fight for survival'.
-    """
-
-    metadata_terms = CONCEPT_RULES[
-        concept_name
-    ]["metadata_terms"]
-
-    strong_scores = np.zeros(
-        len(strong_metadata),
-        dtype=np.float32,
-    )
-
-    description_scores = np.zeros(
-        len(description_text),
-        dtype=np.float32,
-    )
-
-    for (
-        metadata_term,
-        metadata_weight,
-    ) in metadata_terms.items():
-
-        term_pattern = build_term_pattern(
-            metadata_term
+        normalized_series
+        .str.contains(
+            re.escape(
+                search_term
+            ),
+            regex=True,
+            na=False,
         )
-
-        strong_matches = (
-            strong_metadata.str.contains(
-                term_pattern,
-                case=False,
-                regex=True,
-                na=False,
-            )
-            .to_numpy()
-        )
-
-        strong_weighted_scores = (
-            strong_matches.astype(
-                np.float32
-            )
-            * float(
-                metadata_weight
-            )
-        )
-
-        strong_scores = np.maximum(
-            strong_scores,
-            strong_weighted_scores,
-        )
-
-        term_word_count = len(
-            metadata_term.split()
-        )
-
-        if term_word_count >= 2:
-            description_multiplier = 0.55
-        else:
-            description_multiplier = 0.25
-
-        description_matches = (
-            description_text.str.contains(
-                term_pattern,
-                case=False,
-                regex=True,
-                na=False,
-            )
-            .to_numpy()
-        )
-
-        description_weighted_scores = (
-            description_matches.astype(
-                np.float32
-            )
-            * float(
-                metadata_weight
-            )
-            * description_multiplier
-        )
-
-        description_scores = np.maximum(
-            description_scores,
-            description_weighted_scores,
-        )
-
-    return np.maximum(
-        strong_scores,
-        description_scores,
+        .to_numpy(dtype=bool)
     )
 
 
@@ -892,7 +1079,14 @@ def calculate_concept_scores(
     query: str,
     candidate_dataframe: pd.DataFrame,
 ) -> np.ndarray:
-    """Calculate field-aware concept relevance scores."""
+    """
+    Calculate field-aware concept scores.
+
+    Genres and tags are strong evidence.
+    Categories are slightly weaker evidence.
+    Description-only matches are weak evidence.
+    Missing columns are handled safely.
+    """
 
     requested_concepts = (
         detect_requested_concepts(
@@ -906,231 +1100,298 @@ def calculate_concept_scores(
             dtype=np.float32,
         )
 
-    strong_metadata = (
-        candidate_dataframe["genres"]
-        .fillna("")
-        .astype(str)
-        + " "
-        + candidate_dataframe["tags"]
-        .fillna("")
-        .astype(str)
-    ).str.lower()
-
-    description_text = (
-        candidate_dataframe[
-            "short_description"
-        ]
-        .fillna("")
-        .astype(str)
-        .str.lower()
-    )
-
-    total_concept_scores = np.zeros(
-        len(candidate_dataframe),
-        dtype=np.float32,
-    )
-
-    for concept_name in requested_concepts:
-        total_concept_scores += (
-            calculate_single_concept_score(
-                strong_metadata,
-                description_text,
-                concept_name,
+    normalized_genres = (
+        normalize_series(
+            get_optional_text_column(
+                candidate_dataframe,
+                "genres",
             )
         )
-
-    total_concept_scores /= len(
-        requested_concepts
     )
 
-    return total_concept_scores
-
-
-def calculate_quality_scores(
-    candidate_dataframe: pd.DataFrame,
-) -> np.ndarray:
-    """Create a small ranking signal from reviews."""
-
-    review_percentage = (
-        pd.to_numeric(
-            candidate_dataframe[
-                "positive_review_percentage"
-            ],
-            errors="coerce",
-        )
-        .fillna(0)
-        .clip(0, 100)
-        .to_numpy(
-            dtype=np.float32
-        )
-        / 100
-    )
-
-    total_reviews = (
-        pd.to_numeric(
-            candidate_dataframe[
-                "total_reviews"
-            ],
-            errors="coerce",
-        )
-        .fillna(0)
-        .clip(lower=0)
-        .to_numpy(
-            dtype=np.float32
+    normalized_tags = (
+        normalize_series(
+            get_optional_text_column(
+                candidate_dataframe,
+                "tags",
+            )
         )
     )
 
-    review_confidence = np.clip(
-        np.log10(
-            total_reviews + 1
-        ) / 5,
-        0,
-        1,
-    )
-
-    return (
-        review_percentage
-        * (
-            0.75
-            + 0.25
-            * review_confidence
+    normalized_categories = (
+        normalize_series(
+            get_optional_text_column(
+                candidate_dataframe,
+                "categories",
+            )
         )
     )
+
+    normalized_descriptions = (
+        normalize_series(
+            get_optional_text_column(
+                candidate_dataframe,
+                "short_description",
+            )
+        )
+    )
+
+    all_concept_scores: list[
+        np.ndarray
+    ] = []
+
+    for concept_name in requested_concepts:
+        concept_terms = (
+            CONCEPT_GROUPS[
+                concept_name
+            ]
+        )
+
+        one_concept_scores = np.zeros(
+            len(candidate_dataframe),
+            dtype=np.float32,
+        )
+
+        for (
+            term,
+            term_weight,
+        ) in concept_terms.items():
+
+            genre_match = (
+                term_match_mask(
+                    normalized_genres,
+                    term,
+                )
+            )
+
+            tag_match = (
+                term_match_mask(
+                    normalized_tags,
+                    term,
+                )
+            )
+
+            category_match = (
+                term_match_mask(
+                    normalized_categories,
+                    term,
+                )
+            )
+
+            description_match = (
+                term_match_mask(
+                    normalized_descriptions,
+                    term,
+                )
+            )
+
+            strong_metadata_match = (
+                genre_match
+                | tag_match
+            )
+
+            term_scores = np.zeros(
+                len(candidate_dataframe),
+                dtype=np.float32,
+            )
+
+            term_scores = np.maximum(
+                term_scores,
+                (
+                    strong_metadata_match
+                    .astype(np.float32)
+                    * float(term_weight)
+                ),
+            )
+
+            term_scores = np.maximum(
+                term_scores,
+                (
+                    category_match
+                    .astype(np.float32)
+                    * float(term_weight)
+                    * 0.85
+                ),
+            )
+
+            term_scores = np.maximum(
+                term_scores,
+                (
+                    description_match
+                    .astype(np.float32)
+                    * float(term_weight)
+                    * 0.25
+                ),
+            )
+
+            one_concept_scores = (
+                np.maximum(
+                    one_concept_scores,
+                    term_scores,
+                )
+            )
+
+        all_concept_scores.append(
+            one_concept_scores
+        )
+
+    stacked_scores = np.vstack(
+        all_concept_scores
+    )
+
+    final_scores = (
+        stacked_scores
+        .mean(axis=0)
+        .clip(0, 1)
+        .astype(np.float32)
+    )
+
+    return final_scores
 
 
 def calculate_play_mode_preference_scores(
     candidate_dataframe: pd.DataFrame,
     requested_play_mode: str | None,
 ) -> np.ndarray:
-    """Rank games by focus on the requested play mode."""
+    """Score official play-mode preferences."""
 
-    if requested_play_mode is None:
+    if not requested_play_mode:
         return np.zeros(
             len(candidate_dataframe),
             dtype=np.float32,
         )
 
-    category_text = (
-        candidate_dataframe["categories"]
-        .fillna("")
-        .astype(str)
-        .str.lower()
+    categories = (
+        get_optional_text_column(
+            candidate_dataframe,
+            "categories",
+        )
     )
 
     has_single_player = (
-        category_text.str.contains(
+        category_contains(
+            categories,
             r"single[- ]?player",
-            regex=True,
         )
-        .to_numpy()
+        .to_numpy(dtype=bool)
     )
 
     has_multiplayer = (
-        category_text.str.contains(
-            r"multi[- ]?player",
-            regex=True,
+        category_contains(
+            categories,
+            (
+                r"multi[- ]?player|"
+                r"cross[- ]platform multiplayer"
+            ),
         )
-        .to_numpy()
+        .to_numpy(dtype=bool)
     )
 
     has_coop = (
-        category_text.str.contains(
-            r"co[- ]?op|coop|cooperative",
-            regex=True,
+        category_contains(
+            categories,
+            (
+                r"co[- ]?op|"
+                r"coop|"
+                r"cooperative"
+            ),
         )
-        .to_numpy()
+        .to_numpy(dtype=bool)
     )
 
     has_pvp = (
-        category_text.str.contains(
-            r"\bpvp\b",
-            regex=True,
+        category_contains(
+            categories,
+            (
+                r"\bpvp\b|"
+                r"player versus player"
+            ),
         )
-        .to_numpy()
+        .to_numpy(dtype=bool)
     )
 
-    if requested_play_mode == "single-player":
-        preference_scores = np.ones(
-            len(candidate_dataframe),
-            dtype=np.float32,
-        )
+    scores = np.zeros(
+        len(candidate_dataframe),
+        dtype=np.float32,
+    )
 
-        preference_scores -= (
-            has_multiplayer.astype(
-                np.float32
-            )
-            * 0.20
-        )
-
-        preference_scores -= (
-            has_coop.astype(
-                np.float32
-            )
-            * 0.20
-        )
-
-        preference_scores -= (
-            has_pvp.astype(
-                np.float32
-            )
-            * 0.25
-        )
-
-        pure_single_player = (
+    if (
+        requested_play_mode
+        == "single-player"
+    ):
+        scores[
             has_single_player
-            & ~has_multiplayer
-            & ~has_coop
-            & ~has_pvp
-        )
-
-        preference_scores[
-            pure_single_player
         ] = 1.00
 
-    elif requested_play_mode == "co-op":
-        preference_scores = np.ones(
-            len(candidate_dataframe),
-            dtype=np.float32,
-        )
-
-        preference_scores -= (
-            has_pvp.astype(
-                np.float32
+        scores[
+            has_single_player
+            & (
+                has_multiplayer
+                | has_coop
             )
-            * 0.25
-        )
+        ] -= 0.15
 
-        preference_scores -= (
-            has_single_player.astype(
-                np.float32
-            )
-            * 0.05
-        )
+        scores[
+            has_single_player
+            & has_pvp
+        ] -= 0.25
 
-        pure_coop_without_pvp = (
+    elif (
+        requested_play_mode
+        == "co-op"
+    ):
+        scores[
             has_coop
-            & ~has_pvp
-        )
+        ] = 1.00
 
-        preference_scores[
-            pure_coop_without_pvp
-        ] = np.maximum(
-            preference_scores[
-                pure_coop_without_pvp
-            ],
-            0.95,
-        )
+        scores[
+            has_coop
+            & has_single_player
+        ] -= 0.05
+
+        scores[
+            has_coop
+            & has_pvp
+        ] -= 0.25
 
     else:
-        preference_scores = np.ones(
-            len(candidate_dataframe),
-            dtype=np.float32,
-        )
+        scores[
+            has_multiplayer
+        ] = 1.00
 
-    return np.clip(
-        preference_scores,
-        0,
-        1,
+        scores[
+            has_multiplayer
+            & has_single_player
+        ] -= 0.05
+
+    return (
+        scores
+        .clip(0, 1)
+        .astype(np.float32)
+    )
+
+
+def calculate_quality_scores(
+    candidate_dataframe: pd.DataFrame,
+) -> np.ndarray:
+    """Create a review-quality signal."""
+
+    review_column = (
+        get_optional_text_column(
+            candidate_dataframe,
+            "positive_review_percentage",
+        )
+    )
+
+    return (
+        pd.to_numeric(
+            review_column,
+            errors="coerce",
+        )
+        .fillna(0)
+        .clip(0, 100)
+        .to_numpy(dtype=np.float32)
+        / 100
     )
 
 
@@ -1142,11 +1403,18 @@ def calculate_hybrid_scores(
     has_requested_concepts: bool,
     has_requested_play_mode: bool,
 ) -> np.ndarray:
-    """Combine ranking signals using context-sensitive weights."""
+    """Combine all ranking signals."""
 
     normalized_semantic_scores = (
-        semantic_scores + 1
-    ) / 2
+        (
+            np.asarray(
+                semantic_scores,
+                dtype=np.float32,
+            )
+            + 1
+        )
+        / 2
+    )
 
     if (
         has_requested_concepts
@@ -1157,19 +1425,9 @@ def calculate_hybrid_scores(
             * normalized_semantic_scores
             + 0.20
             * concept_scores
-            + 0.20
+            + 0.15
             * play_mode_scores
-            + 0.05
-            * quality_scores
-        )
-
-    if has_requested_play_mode:
-        return (
-            0.65
-            * normalized_semantic_scores
-            + 0.30
-            * play_mode_scores
-            + 0.05
+            + 0.10
             * quality_scores
         )
 
@@ -1177,16 +1435,26 @@ def calculate_hybrid_scores(
         return (
             0.65
             * normalized_semantic_scores
-            + 0.30
+            + 0.25
             * concept_scores
-            + 0.05
+            + 0.10
+            * quality_scores
+        )
+
+    if has_requested_play_mode:
+        return (
+            0.70
+            * normalized_semantic_scores
+            + 0.20
+            * play_mode_scores
+            + 0.10
             * quality_scores
         )
 
     return (
-        0.95
+        0.90
         * normalized_semantic_scores
-        + 0.05
+        + 0.10
         * quality_scores
     )
 
@@ -1195,7 +1463,13 @@ def query_requires_clarification(
     query: str,
     filters: dict[str, object],
 ) -> bool:
-    """Check whether a query is too broad for useful ranking."""
+    """
+    Return True for weak or price-only queries.
+
+    A genre, mood, platform, play mode, year,
+    free condition or review condition makes
+    the request specific enough.
+    """
 
     requested_concepts = (
         detect_requested_concepts(
@@ -1206,7 +1480,7 @@ def query_requires_clarification(
     if requested_concepts:
         return False
 
-    meaningful_filter_names = {
+    strong_filter_names = {
         "minimum_review_percentage",
         "is_free",
         "platform",
@@ -1216,21 +1490,55 @@ def query_requires_clarification(
         "release_year_before",
     }
 
-    has_meaningful_filter = any(
-        filter_name
-        in meaningful_filter_names
-        for filter_name in filters
+    has_strong_filter = any(
+        filter_name in filters
+        for filter_name
+        in strong_filter_names
     )
 
-    if has_meaningful_filter:
+    return not has_strong_filter
+
+
+def is_query_too_broad(
+    query: str,
+    filters: dict[str, object],
+    requested_concepts: list[str],
+    candidate_count: int,
+) -> bool:
+    """Check whether many games match a weak query."""
+
+    if candidate_count == 0:
         return False
 
-    return True
+    if requested_concepts:
+        return False
+
+    return (
+        candidate_count >= 100
+        and query_requires_clarification(
+            query,
+            filters,
+        )
+    )
+
+
+def empty_search_result() -> pd.DataFrame:
+    """Return an empty search result."""
+
+    return pd.DataFrame(
+        columns=[
+            "semantic_score",
+            "concept_score",
+            "play_mode_score",
+            "quality_score",
+            "hybrid_score",
+        ]
+    )
 
 
 def search_games(
     query: str,
-    top_k: int,
+    top_k: int = 5,
 ) -> tuple[
     pd.DataFrame,
     dict[str, object],
@@ -1238,7 +1546,23 @@ def search_games(
     bool,
     list[str],
 ]:
-    """Filter candidates and rank them using hybrid retrieval."""
+    """Filter candidates and rank results."""
+
+    cleaned_query = query.strip()
+
+    if not cleaned_query:
+        return (
+            empty_search_result(),
+            {},
+            0,
+            True,
+            [],
+        )
+
+    if top_k < 1:
+        raise ValueError(
+            "top_k must be at least 1."
+        )
 
     (
         embeddings,
@@ -1247,13 +1571,13 @@ def search_games(
 
     extracted_filters = (
         extract_filters(
-            query
+            cleaned_query
         )
     )
 
     requested_concepts = (
         detect_requested_concepts(
-            query
+            cleaned_query
         )
     )
 
@@ -1262,71 +1586,92 @@ def search_games(
         extracted_filters,
     )
 
-    candidate_indices = np.flatnonzero(
-        result_mask.to_numpy()
+    candidate_indices = (
+        np.flatnonzero(
+            result_mask.to_numpy(
+                dtype=bool
+            )
+        )
     )
 
     candidate_count = len(
         candidate_indices
     )
 
-    clarification_required = (
-        query_requires_clarification(
-            query,
-            extracted_filters,
-        )
-    )
-
-    if (
-        candidate_count == 0
-        or clarification_required
-    ):
+    if candidate_count == 0:
         return (
-            pd.DataFrame(),
+            empty_search_result(),
             extracted_filters,
-            candidate_count,
-            clarification_required,
+            0,
+            False,
             requested_concepts,
         )
 
-    embedding_model = SentenceTransformer(
-        MODEL_NAME
+    clarification_required = (
+        is_query_too_broad(
+            query=cleaned_query,
+            filters=extracted_filters,
+            requested_concepts=(
+                requested_concepts
+            ),
+            candidate_count=(
+                candidate_count
+            ),
+        )
+    )
+
+    if clarification_required:
+        return (
+            empty_search_result(),
+            extracted_filters,
+            candidate_count,
+            True,
+            requested_concepts,
+        )
+
+    embedding_model = (
+        load_embedding_model()
     )
 
     query_embedding = (
         embedding_model.encode(
-            [query],
+            [cleaned_query],
             normalize_embeddings=True,
             convert_to_numpy=True,
         )[0]
     )
 
-    candidate_embeddings = embeddings[
-        candidate_indices
-    ]
+    query_embedding = np.asarray(
+        query_embedding,
+        dtype=np.float32,
+    )
+
+    candidate_embeddings = (
+        embeddings[
+            candidate_indices
+        ]
+    )
 
     semantic_scores = (
         candidate_embeddings
         @ query_embedding
+    ).astype(
+        np.float32
     )
 
     candidate_dataframe = (
         game_dataframe
-        .iloc[candidate_indices]
+        .iloc[
+            candidate_indices
+        ]
         .copy()
         .reset_index(drop=True)
     )
 
     concept_scores = (
         calculate_concept_scores(
-            query,
+            cleaned_query,
             candidate_dataframe,
-        )
-    )
-
-    quality_scores = (
-        calculate_quality_scores(
-            candidate_dataframe
         )
     )
 
@@ -1339,37 +1684,68 @@ def search_games(
     play_mode_scores = (
         calculate_play_mode_preference_scores(
             candidate_dataframe,
-            requested_play_mode,
+            (
+                str(
+                    requested_play_mode
+                )
+                if requested_play_mode
+                is not None
+                else None
+            ),
         )
     )
 
-    hybrid_scores = calculate_hybrid_scores(
-        semantic_scores=semantic_scores,
-        concept_scores=concept_scores,
-        play_mode_scores=play_mode_scores,
-        quality_scores=quality_scores,
-        has_requested_concepts=bool(
-            requested_concepts
-        ),
-        has_requested_play_mode=(
-            requested_play_mode
-            is not None
-        ),
+    quality_scores = (
+        calculate_quality_scores(
+            candidate_dataframe
+        )
+    )
+
+    hybrid_scores = (
+        calculate_hybrid_scores(
+            semantic_scores=(
+                semantic_scores
+            ),
+            concept_scores=(
+                concept_scores
+            ),
+            play_mode_scores=(
+                play_mode_scores
+            ),
+            quality_scores=(
+                quality_scores
+            ),
+            has_requested_concepts=bool(
+                requested_concepts
+            ),
+            has_requested_play_mode=(
+                requested_play_mode
+                is not None
+            ),
+        )
     )
 
     number_of_results = min(
-        top_k,
+        int(top_k),
         candidate_count,
     )
 
-    ranked_positions = np.argsort(
-        hybrid_scores
-    )[::-1][:number_of_results]
+    ranked_positions = (
+        np.argsort(
+            hybrid_scores,
+            kind="stable",
+        )[::-1][
+            :number_of_results
+        ]
+    )
 
     search_results = (
         candidate_dataframe
-        .iloc[ranked_positions]
+        .iloc[
+            ranked_positions
+        ]
         .copy()
+        .reset_index(drop=True)
     )
 
     search_results[
@@ -1391,6 +1767,12 @@ def search_games(
     ]
 
     search_results[
+        "quality_score"
+    ] = quality_scores[
+        ranked_positions
+    ]
+
+    search_results[
         "hybrid_score"
     ] = hybrid_scores[
         ranked_positions
@@ -1400,7 +1782,7 @@ def search_games(
         search_results,
         extracted_filters,
         candidate_count,
-        clarification_required,
+        False,
         requested_concepts,
     )
 
@@ -1409,7 +1791,7 @@ def format_filter_value(
     filter_name: str,
     filter_value: object,
 ) -> str:
-    """Format one extracted filter for display."""
+    """Format an extracted filter."""
 
     if filter_name == "maximum_price":
         return (
@@ -1444,7 +1826,7 @@ def format_filter_value(
         == "release_year_after"
     ):
         return (
-            "Released after: "
+            f"Released after: "
             f"{filter_value}"
         )
 
@@ -1453,7 +1835,7 @@ def format_filter_value(
         == "release_year_since"
     ):
         return (
-            "Released since: "
+            f"Released since: "
             f"{filter_value}"
         )
 
@@ -1462,7 +1844,7 @@ def format_filter_value(
         == "release_year_before"
     ):
         return (
-            "Released before: "
+            f"Released before: "
             f"{filter_value}"
         )
 
@@ -1472,80 +1854,56 @@ def format_filter_value(
     )
 
 
-def is_free_value(
-    value: object,
-) -> bool:
-    """Safely interpret a Boolean-looking free-game value."""
-
-    return (
-        str(value)
-        .strip()
-        .lower()
-        == "true"
-    )
-
-
 def format_release_year(
-    value: object,
+    value: Any,
 ) -> str:
-    """Format a release year without a decimal point."""
+    """Format release year without decimals."""
 
-    numeric_value = pd.to_numeric(
+    converted_value = pd.to_numeric(
         value,
         errors="coerce",
     )
 
     if pd.isna(
-        numeric_value
+        converted_value
     ):
         return "Unknown"
 
     return str(
-        int(numeric_value)
+        int(converted_value)
     )
 
 
-def print_clarification_message(
-    candidate_count: int,
-) -> None:
-    """Ask the user for a more specific preference."""
+def format_price(
+    row: pd.Series,
+) -> str:
+    """Format a game price."""
 
-    print(
-        f"\nThe query is too broad. "
-        f"{candidate_count:,} games satisfy "
-        "the current conditions."
+    price = pd.to_numeric(
+        row.get(
+            "price_usd"
+        ),
+        errors="coerce",
     )
 
-    print(
-        "\nPlease add at least one preference:"
-    )
+    if (
+        is_free_value(
+            row.get(
+                "is_free"
+            )
+        )
+        or (
+            not pd.isna(price)
+            and float(price) == 0
+        )
+    ):
+        return "Free"
 
-    print(
-        "- Genre: RPG, strategy, horror, racing"
-    )
+    if pd.isna(price):
+        return "Unknown"
 
-    print(
-        "- Mood: relaxing, scary, story-rich"
-    )
-
-    print(
-        "- Play mode: single-player, co-op, multiplayer"
-    )
-
-    print(
-        "- Platform: Windows, Mac, Linux"
-    )
-
-    print(
-        "- Quality: at least 80% positive reviews"
-    )
-
-    print(
-        "\nExample:"
-    )
-
-    print(
-        "a relaxing single-player farming game under $20"
+    return (
+        f"${float(price):.2f}"
     )
 
 
@@ -1557,10 +1915,12 @@ def print_results(
     clarification_required: bool,
     requested_concepts: list[str],
 ) -> None:
-    """Display hybrid retrieval results."""
+    """Display results in the terminal."""
 
     print("=" * 72)
-    print("GAMEWISE HYBRID SEARCH")
+    print(
+        "GAMEWISE HYBRID SEARCH"
+    )
     print("=" * 72)
 
     print(
@@ -1571,17 +1931,11 @@ def print_results(
         "\nEXTRACTED FILTERS"
     )
 
-    if not filters:
-        print(
-            "No structured filters detected."
-        )
-
-    else:
+    if filters:
         for (
             filter_name,
             filter_value,
         ) in filters.items():
-
             print(
                 "- "
                 + format_filter_value(
@@ -1589,6 +1943,11 @@ def print_results(
                     filter_value,
                 )
             )
+
+    else:
+        print(
+            "No structured filters detected."
+        )
 
     print(
         "\nDETECTED CONCEPTS"
@@ -1604,7 +1963,8 @@ def print_results(
 
     else:
         print(
-            "No clear genre, mood, or gameplay concept detected."
+            "No clear genre, mood, or "
+            "gameplay concept detected."
         )
 
     print(
@@ -1613,9 +1973,49 @@ def print_results(
     )
 
     if clarification_required:
-        print_clarification_message(
-            candidate_count
+        print(
+            "\nThe query is too broad. "
+            f"{candidate_count:,} games "
+            "satisfy the current conditions."
         )
+
+        print(
+            "\nPlease add at least one preference:"
+        )
+
+        print(
+            "- Genre: RPG, strategy, "
+            "horror, racing"
+        )
+
+        print(
+            "- Mood: relaxing, scary, "
+            "story-rich"
+        )
+
+        print(
+            "- Play mode: single-player, "
+            "co-op, multiplayer"
+        )
+
+        print(
+            "- Platform: Windows, Mac, Linux"
+        )
+
+        print(
+            "- Quality: at least 80% "
+            "positive reviews"
+        )
+
+        print(
+            "\nExample:"
+        )
+
+        print(
+            "a relaxing single-player "
+            "farming game under $20"
+        )
+
         return
 
     if search_results.empty:
@@ -1631,10 +2031,6 @@ def print_results(
         )
 
         return
-
-    play_mode_was_requested = (
-        "play_mode" in filters
-    )
 
     for (
         result_number,
@@ -1654,128 +2050,138 @@ def print_results(
 
         print(
             "Hybrid score: "
-            f"{row['hybrid_score']:.4f}"
+            f"{float(row['hybrid_score']):.4f}"
         )
 
         print(
             "Semantic score: "
-            f"{row['semantic_score']:.4f}"
+            f"{float(row['semantic_score']):.4f}"
         )
 
         print(
             "Concept score: "
-            f"{row['concept_score']:.4f}"
+            f"{float(row['concept_score']):.4f}"
         )
 
-        if play_mode_was_requested:
+        if "play_mode" in filters:
             print(
                 "Play-mode score: "
-                f"{row['play_mode_score']:.4f}"
+                f"{float(row['play_mode_score']):.4f}"
             )
 
-        price = float(
-            row["price_usd"]
+        print(
+            f"Price: "
+            f"{format_price(row)}"
         )
 
-        if (
-            is_free_value(
-                row["is_free"]
+        review_percentage = (
+            pd.to_numeric(
+                row.get(
+                    "positive_review_percentage"
+                ),
+                errors="coerce",
             )
-            or price == 0
+        )
+
+        total_reviews = pd.to_numeric(
+            row.get(
+                "total_reviews"
+            ),
+            errors="coerce",
+        )
+
+        if pd.isna(
+            review_percentage
         ):
-            price_text = "Free"
+            review_text = "Unknown"
+
+        elif pd.isna(
+            total_reviews
+        ):
+            review_text = (
+                f"{float(review_percentage):.2f}% "
+                "positive"
+            )
 
         else:
-            price_text = (
-                f"${price:.2f}"
+            review_text = (
+                f"{float(review_percentage):.2f}% "
+                f"positive from "
+                f"{int(total_reviews):,} reviews"
             )
 
         print(
-            f"Price: {price_text}"
+            f"Positive reviews: "
+            f"{review_text}"
         )
 
         print(
-            "Positive reviews: "
-            f"{float(row[
-                'positive_review_percentage'
-            ]):.2f}% "
-            f"from "
-            f"{int(row['total_reviews']):,} "
-            "reviews"
+            f"Genres: "
+            f"{row.get('genres', '')}"
         )
 
         print(
-            f"Genres: {row['genres']}"
+            f"Categories: "
+            f"{row.get('categories', '')}"
         )
 
         print(
-            "Categories: "
-            f"{row['categories']}"
+            f"Tags: "
+            f"{row.get('tags', '')}"
         )
 
         print(
-            f"Tags: {row['tags']}"
-        )
-
-        print(
-            "Platforms: "
-            f"{row['platforms']}"
+            f"Platforms: "
+            f"{row.get('platforms', '')}"
         )
 
         print(
             "Release year: "
-            + format_release_year(
-                row["release_year"]
-            )
+            f"{format_release_year(row.get('release_year'))}"
         )
 
         print(
             "Steam URL: "
-            f"{row['steam_store_url']}"
+            f"{row.get('steam_store_url', '')}"
         )
 
 
 def warn_about_missing_price(
     query: str,
 ) -> None:
-    """Warn when PowerShell may have removed a dollar amount."""
+    """Warn when PowerShell removes a price."""
 
-    missing_price_pattern = (
+    suspicious_pattern = (
         r"\b(?:under|below|less than|up to)"
         r"\s*(?:with|for|released|$)"
     )
 
     if re.search(
-        missing_price_pattern,
+        suspicious_pattern,
         query,
         flags=re.IGNORECASE,
     ):
         print(
-            "WARNING: The price may have been "
-            "removed by PowerShell."
-        )
-
-        print(
-            "Use single quotes around the query:"
-        )
-
-        print(
-            "python .\\scripts\\hybrid_search.py "
-            "'a game under $20'\n"
+            "WARNING: A price value may have "
+            "been removed by PowerShell. "
+            "Put the query inside single quotes, "
+            "for example: "
+            "'a game under $20'.\n"
         )
 
 
 def main() -> None:
-    """Run hybrid game search from the command line."""
+    """Run hybrid search from the command line."""
 
-    argument_parser = argparse.ArgumentParser(
-        description=(
-            "Search Steam games using "
-            "hard metadata filters, "
-            "semantic similarity, "
-            "field-aware concept matching, "
-            "play-mode preference, "
-            "and review quality."
+    argument_parser = (
+        argparse.ArgumentParser(
+            description=(
+                "Search Steam games with hard "
+                "filters, semantic similarity, "
+                "field-aware concept matching, "
+                "play-mode preferences, and "
+                "review quality."
+            )
         )
     )
 
@@ -1820,8 +2226,12 @@ def main() -> None:
         search_results=search_results,
         filters=extracted_filters,
         candidate_count=candidate_count,
-        clarification_required=clarification_required,
-        requested_concepts=requested_concepts,
+        clarification_required=(
+            clarification_required
+        ),
+        requested_concepts=(
+            requested_concepts
+        ),
     )
 
 
