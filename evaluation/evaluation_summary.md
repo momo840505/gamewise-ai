@@ -7,7 +7,7 @@
 - Valid title rate: 100.00%
 - Duplicate-free rate: 100.00%
 - Independent concept relevance@5: 100.00%
-- Average retrieval latency: 0.583 seconds
+- Average retrieval latency: 0.589 seconds
 
 ## Case results
 
@@ -20,7 +20,7 @@
 - Valid title rate: 100.00%
 - Duplicate-free rate: 100.00%
 - Concept relevance@5: 100.00%
-- Latency: 6.076 seconds
+- Latency: 6.134 seconds
 - Notes: passed
 
 ### relaxing_single_player
@@ -32,7 +32,7 @@
 - Valid title rate: 100.00%
 - Duplicate-free rate: 100.00%
 - Concept relevance@5: 100.00%
-- Latency: 0.074 seconds
+- Latency: 0.078 seconds
 - Notes: passed
 
 ### free_psychological_horror
@@ -56,7 +56,7 @@
 - Valid title rate: 100.00%
 - Duplicate-free rate: 100.00%
 - Concept relevance@5: 100.00%
-- Latency: 0.033 seconds
+- Latency: 0.038 seconds
 - Notes: passed
 
 ### recent_coop_adventure
@@ -68,7 +68,7 @@
 - Valid title rate: 100.00%
 - Duplicate-free rate: 100.00%
 - Concept relevance@5: 100.00%
-- Latency: 0.024 seconds
+- Latency: 0.025 seconds
 - Notes: passed
 
 ### story_rich_rpg
@@ -80,7 +80,7 @@
 - Valid title rate: 100.00%
 - Duplicate-free rate: 100.00%
 - Concept relevance@5: 100.00%
-- Latency: 0.045 seconds
+- Latency: 0.044 seconds
 - Notes: passed
 
 ### windows_racing
@@ -92,7 +92,7 @@
 - Valid title rate: 100.00%
 - Duplicate-free rate: 100.00%
 - Concept relevance@5: 100.00%
-- Latency: 0.052 seconds
+- Latency: 0.063 seconds
 - Notes: passed
 
 ### mac_farming
@@ -104,7 +104,7 @@
 - Valid title rate: 100.00%
 - Duplicate-free rate: 100.00%
 - Concept relevance@5: 100.00%
-- Latency: 0.046 seconds
+- Latency: 0.042 seconds
 - Notes: passed
 
 ### recent_multiplayer_shooter
@@ -128,7 +128,7 @@
 - Valid title rate: 100.00%
 - Duplicate-free rate: 100.00%
 - Concept relevance@5: Not applicable
-- Latency: 0.002 seconds
+- Latency: 0.001 seconds
 - Notes: passed
 
 ### impossible_conditions
