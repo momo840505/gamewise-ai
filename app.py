@@ -1,12 +1,14 @@
-import math
+from __future__ import annotations
+
+import html
+import os
 from typing import Any
 
 import pandas as pd
 import streamlit as st
+from dotenv import load_dotenv
 
-from scripts.generate_answer import (
-    generate_grounded_answer,
-)
+from scripts.generate_answer import generate_grounded_answer
 from scripts.hybrid_search import (
     format_filter_value,
     format_release_year,
@@ -14,6 +16,33 @@ from scripts.hybrid_search import (
     search_games,
 )
 
+
+load_dotenv()
+
+EXAMPLE_SEARCHES = [
+    (
+        "🌿 Cozy single-player",
+        "a relaxing single-player casual game under $15",
+    ),
+    (
+        "🛡️ Co-op survival",
+        (
+            "a cooperative survival game under $20 "
+            "with at least 80% positive reviews"
+        ),
+    ),
+    (
+        "👻 Free psychological horror",
+        "a free psychological horror game",
+    ),
+    (
+        "♟️ Tactical strategy",
+        (
+            "a turn-based tactical strategy game "
+            "under $20 for Linux"
+        ),
+    ),
+]
 
 st.set_page_config(
     page_title="GameWise AI",
@@ -24,61 +53,364 @@ st.set_page_config(
 
 
 def apply_page_style() -> None:
-    """Apply custom styling to the Streamlit application."""
+    """Apply a polished visual style."""
 
     st.markdown(
         """
         <style>
+        :root {
+            --purple: #6f52ed;
+            --purple-dark: #4e36c4;
+            --pink: #eb72ad;
+            --text: #222238;
+            --muted: #6e6e82;
+            --border: rgba(111, 82, 237, 0.16);
+        }
+
+        .stApp {
+            background:
+                radial-gradient(
+                    circle at 8% 0%,
+                    rgba(111, 82, 237, 0.10),
+                    transparent 32%
+                ),
+                radial-gradient(
+                    circle at 94% 8%,
+                    rgba(235, 114, 173, 0.08),
+                    transparent 28%
+                ),
+                #fbfbff;
+        }
+
         .block-container {
-            max-width: 1200px;
-            padding-top: 2rem;
+            max-width: 1180px;
+            padding-top: 1.8rem;
             padding-bottom: 4rem;
         }
 
-        .gamewise-title {
-            font-size: 2.8rem;
-            font-weight: 800;
-            line-height: 1.1;
-            margin-bottom: 0.35rem;
+        [data-testid="stSidebar"] {
+            background:
+                linear-gradient(
+                    180deg,
+                    #f5f2ff 0%,
+                    #fcfbff 60%,
+                    #ffffff 100%
+                );
+            border-right: 1px solid var(--border);
         }
 
-        .gamewise-subtitle {
-            font-size: 1.05rem;
-            color: #6b7280;
-            margin-bottom: 1.8rem;
+        .hero {
+            position: relative;
+            overflow: hidden;
+            padding: 2.2rem 2.4rem;
+            margin-bottom: 1.25rem;
+            border: 1px solid rgba(111, 82, 237, 0.18);
+            border-radius: 24px;
+            background:
+                linear-gradient(
+                    120deg,
+                    rgba(111, 82, 237, 0.13),
+                    rgba(235, 114, 173, 0.08)
+                );
+            box-shadow:
+                0 18px 50px rgba(83, 66, 150, 0.08);
+        }
+
+        .hero::after {
+            content: "";
+            position: absolute;
+            width: 210px;
+            height: 210px;
+            right: -55px;
+            top: -100px;
+            border-radius: 50%;
+            background:
+                linear-gradient(
+                    135deg,
+                    rgba(111, 82, 237, 0.22),
+                    rgba(235, 114, 173, 0.14)
+                );
+        }
+
+        .hero-title {
+            position: relative;
+            z-index: 1;
+            margin-bottom: 0.65rem;
+            color: var(--text);
+            font-size: 3rem;
+            font-weight: 850;
+            line-height: 1.05;
+        }
+
+        .hero-subtitle {
+            position: relative;
+            z-index: 1;
+            max-width: 800px;
+            color: var(--muted);
+            font-size: 1.08rem;
+            line-height: 1.65;
         }
 
         .section-title {
+            margin-top: 0.7rem;
+            margin-bottom: 0.8rem;
+            color: var(--text);
             font-size: 1.35rem;
+            font-weight: 780;
+        }
+
+        .filter-chip,
+        .concept-chip,
+        .tag-chip {
+            display: inline-block;
+            margin: 0.16rem 0.28rem 0.16rem 0;
+            border-radius: 999px;
+            line-height: 1.2;
+        }
+
+        .filter-chip {
+            padding: 0.45rem 0.72rem;
+            border: 1px solid rgba(111, 82, 237, 0.18);
+            background: rgba(111, 82, 237, 0.10);
+            color: #4f39ba;
+            font-size: 0.87rem;
+            font-weight: 650;
+        }
+
+        .concept-chip {
+            padding: 0.45rem 0.72rem;
+            border: 1px solid rgba(235, 114, 173, 0.20);
+            background: rgba(235, 114, 173, 0.10);
+            color: #a74273;
+            font-size: 0.87rem;
+            font-weight: 650;
+        }
+
+        .tag-chip {
+            padding: 0.30rem 0.56rem;
+            border: 1px solid #e6e6ef;
+            background: #f4f4fa;
+            color: #5d5d70;
+            font-size: 0.78rem;
+        }
+
+        .match-pill {
+            display: inline-block;
+            padding: 0.40rem 0.70rem;
+            border-radius: 999px;
+            white-space: nowrap;
+            font-size: 0.82rem;
             font-weight: 750;
-            margin-top: 1rem;
-            margin-bottom: 0.75rem;
         }
 
-        .result-count {
-            color: #6b7280;
-            margin-bottom: 1rem;
+        .match-excellent {
+            border: 1px solid #bdebd2;
+            background: #e7f8ef;
+            color: #176b43;
         }
 
-        .score-caption {
-            color: #6b7280;
-            font-size: 0.88rem;
+        .match-strong {
+            border: 1px solid #d8d0ff;
+            background: #f0edff;
+            color: #4e38b8;
         }
 
-        div[data-testid="stMetric"] {
-            border: 1px solid rgba(128, 128, 128, 0.22);
-            border-radius: 0.8rem;
-            padding: 0.8rem;
+        .match-good {
+            border: 1px solid #f4dfaa;
+            background: #fff7df;
+            color: #8b5c16;
+        }
+
+        .match-partial {
+            border: 1px solid #f2cfdb;
+            background: #fff0f5;
+            color: #7a5162;
+        }
+
+        .feature-card {
+            min-height: 165px;
+            padding: 1.2rem;
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.80);
+        }
+
+        .feature-icon {
+            margin-bottom: 0.5rem;
+            font-size: 1.8rem;
+        }
+
+        .feature-title {
+            margin-bottom: 0.35rem;
+            color: var(--text);
+            font-size: 1rem;
+            font-weight: 750;
+        }
+
+        .feature-text {
+            color: var(--muted);
+            font-size: 0.90rem;
+            line-height: 1.5;
+        }
+
+        .summary-mode {
+            display: inline-block;
+            margin-bottom: 0.65rem;
+            padding: 0.28rem 0.58rem;
+            border-radius: 999px;
+            background: rgba(111, 82, 237, 0.10);
+            color: var(--purple-dark);
+            font-size: 0.78rem;
+            font-weight: 700;
         }
 
         div[data-testid="stForm"] {
-            border: 1px solid rgba(128, 128, 128, 0.22);
-            border-radius: 1rem;
-            padding: 1.2rem;
+            padding: 1.25rem;
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.86);
+            box-shadow:
+                0 12px 35px rgba(83, 66, 150, 0.05);
+        }
+
+        div[data-testid="stVerticalBlockBorderWrapper"] {
+            border-color: var(--border);
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.92);
+            box-shadow:
+                0 10px 32px rgba(83, 66, 150, 0.055);
+        }
+
+        div[data-testid="stMetric"] {
+            padding: 0.72rem 0.82rem;
+            border: 1px solid rgba(111, 82, 237, 0.12);
+            border-radius: 14px;
+            background: rgba(248, 247, 255, 0.80);
+        }
+
+        div[data-testid="stButton"] button,
+        div[data-testid="stFormSubmitButton"] button,
+        div[data-testid="stDownloadButton"] button,
+        div[data-testid="stLinkButton"] a {
+            min-height: 2.7rem;
+            border-radius: 12px;
         }
         </style>
         """,
         unsafe_allow_html=True,
+    )
+
+
+def initialize_session_state() -> None:
+    """Create session values used by the interface."""
+
+    defaults = {
+        "query_input": "",
+        "search_history": [],
+        "shortlist": [],
+        "auto_submit": False,
+    }
+
+    for key, value in defaults.items():
+        if key not in st.session_state:
+            st.session_state[key] = value
+
+
+def select_example_query(query: str) -> None:
+    """Insert an example query and run it automatically."""
+
+    st.session_state["query_input"] = query
+    st.session_state["auto_submit"] = True
+
+
+def clear_current_search() -> None:
+    """Clear the current search."""
+
+    st.session_state["query_input"] = ""
+    st.session_state["auto_submit"] = False
+    st.session_state.pop(
+        "search_payload",
+        None,
+    )
+    st.session_state.pop(
+        "submitted_query",
+        None,
+    )
+
+
+def clear_search_history() -> None:
+    """Remove all recent searches."""
+
+    st.session_state["search_history"] = []
+
+
+def clear_shortlist() -> None:
+    """Remove every saved game."""
+
+    st.session_state["shortlist"] = []
+
+
+def add_to_search_history(query: str) -> None:
+    """Save the newest query without duplicates."""
+
+    history = list(
+        st.session_state.get(
+            "search_history",
+            [],
+        )
+    )
+
+    history = [
+        saved_query
+        for saved_query in history
+        if saved_query != query
+    ]
+
+    history.insert(
+        0,
+        query,
+    )
+
+    st.session_state["search_history"] = history[:5]
+
+
+def add_to_shortlist(
+    game_name: str,
+    steam_url: str,
+) -> None:
+    """Save one recommendation to the shortlist."""
+
+    shortlist = list(
+        st.session_state.get(
+            "shortlist",
+            [],
+        )
+    )
+
+    already_saved = any(
+        item["name"] == game_name
+        for item in shortlist
+    )
+
+    if already_saved:
+        st.toast(
+            f"{game_name} is already saved.",
+            icon="✅",
+        )
+        return
+
+    shortlist.append(
+        {
+            "name": game_name,
+            "url": steam_url,
+        }
+    )
+
+    st.session_state["shortlist"] = shortlist
+
+    st.toast(
+        f"{game_name} added to your shortlist.",
+        icon="💜",
     )
 
 
@@ -93,7 +425,7 @@ def run_cached_search(
     bool,
     list[str],
 ]:
-    """Run and cache one hybrid retrieval request."""
+    """Run and cache one hybrid search."""
 
     return search_games(
         query=query,
@@ -108,7 +440,7 @@ def run_cached_generation(
     filters: dict[str, object],
     requested_concepts: list[str],
 ) -> tuple[str, str]:
-    """Generate and cache a grounded recommendation answer."""
+    """Generate and cache one grounded summary."""
 
     return generate_grounded_answer(
         query=query,
@@ -149,9 +481,9 @@ def safe_text(
 
 def shorten_text(
     value: Any,
-    maximum_length: int = 320,
+    maximum_length: int = 330,
 ) -> str:
-    """Shorten long game descriptions."""
+    """Shorten a long description."""
 
     text = safe_text(
         value,
@@ -162,8 +494,7 @@ def shorten_text(
         return text
 
     return (
-        text[: maximum_length - 3]
-        .rstrip()
+        text[: maximum_length - 3].rstrip()
         + "..."
     )
 
@@ -171,7 +502,7 @@ def shorten_text(
 def format_price(
     row: pd.Series,
 ) -> str:
-    """Format a retrieved game's price."""
+    """Format one game's price."""
 
     price = pd.to_numeric(
         row.get("price_usd"),
@@ -195,12 +526,30 @@ def format_price(
     return f"${float(price):.2f}"
 
 
+def format_review_percentage(
+    row: pd.Series,
+) -> str:
+    """Format the positive-review percentage."""
+
+    percentage = pd.to_numeric(
+        row.get(
+            "positive_review_percentage"
+        ),
+        errors="coerce",
+    )
+
+    if pd.isna(percentage):
+        return "Unknown"
+
+    return f"{float(percentage):.1f}%"
+
+
 def format_review_summary(
     row: pd.Series,
 ) -> str:
-    """Format review percentage and review count."""
+    """Format review percentage and count."""
 
-    review_percentage = pd.to_numeric(
+    percentage = pd.to_numeric(
         row.get(
             "positive_review_percentage"
         ),
@@ -212,25 +561,25 @@ def format_review_summary(
         errors="coerce",
     )
 
-    if pd.isna(review_percentage):
+    if pd.isna(percentage):
         return "Review information unavailable"
 
     if pd.isna(total_reviews):
         return (
-            f"{float(review_percentage):.2f}% positive"
+            f"{float(percentage):.2f}% positive"
         )
 
     return (
-        f"{float(review_percentage):.2f}% positive "
+        f"{float(percentage):.2f}% positive "
         f"from {int(total_reviews):,} reviews"
     )
 
 
-def format_tags(
+def get_tags(
     value: Any,
     maximum_tags: int = 8,
-) -> str:
-    """Return a compact list of tags."""
+) -> list[str]:
+    """Return the first useful tags."""
 
     tag_text = safe_text(
         value,
@@ -238,7 +587,7 @@ def format_tags(
     )
 
     if not tag_text:
-        return "No tags available"
+        return []
 
     tags = [
         tag.strip()
@@ -246,12 +595,74 @@ def format_tags(
         if tag.strip()
     ]
 
-    selected_tags = tags[
-        :maximum_tags
-    ]
+    return tags[:maximum_tags]
 
-    return " · ".join(
-        selected_tags
+
+def render_chips(
+    values: list[str],
+    css_class: str,
+) -> None:
+    """Display filters, concepts, or tags as chips."""
+
+    if not values:
+        return
+
+    chip_html = "".join(
+        (
+            f'<span class="{css_class}">'
+            f"{html.escape(value)}"
+            "</span>"
+        )
+        for value in values
+    )
+
+    st.markdown(
+        chip_html,
+        unsafe_allow_html=True,
+    )
+
+
+def get_match_label(
+    row: pd.Series,
+) -> tuple[str, str]:
+    """Convert the hybrid score into a friendly label."""
+
+    score_value = pd.to_numeric(
+        row.get("hybrid_score"),
+        errors="coerce",
+    )
+
+    if pd.isna(score_value):
+        return (
+            "Relevant match",
+            "match-good",
+        )
+
+    score = float(
+        score_value
+    )
+
+    if score >= 0.84:
+        return (
+            "Excellent match",
+            "match-excellent",
+        )
+
+    if score >= 0.79:
+        return (
+            "Strong match",
+            "match-strong",
+        )
+
+    if score >= 0.72:
+        return (
+            "Good match",
+            "match-good",
+        )
+
+    return (
+        "Partial match",
+        "match-partial",
     )
 
 
@@ -260,16 +671,16 @@ def build_match_reasons(
     filters: dict[str, object],
     requested_concepts: list[str],
 ) -> list[str]:
-    """Build grounded reasons using only retrieved metadata."""
+    """Build clear reasons from retrieved metadata."""
 
-    match_reasons: list[str] = []
+    reasons: list[str] = []
 
     price = pd.to_numeric(
         row.get("price_usd"),
         errors="coerce",
     )
 
-    review_percentage = pd.to_numeric(
+    percentage = pd.to_numeric(
         row.get(
             "positive_review_percentage"
         ),
@@ -286,13 +697,8 @@ def build_match_reasons(
         default="",
     )
 
-    categories = safe_text(
-        row.get("categories"),
-        default="",
-    )
-
     if filters.get("is_free") is True:
-        match_reasons.append(
+        reasons.append(
             "It is available for free."
         )
 
@@ -305,33 +711,32 @@ def build_match_reasons(
         )
 
         if float(price) == 0:
-            match_reasons.append(
-                f"It is free, so it is within your "
+            reasons.append(
+                f"It is free and fits your "
                 f"${maximum_price:.2f} budget."
             )
+
         else:
-            match_reasons.append(
-                f"Its ${float(price):.2f} price is within "
+            reasons.append(
+                f"Its ${float(price):.2f} price fits "
                 f"your ${maximum_price:.2f} budget."
             )
 
     if (
         "minimum_review_percentage"
         in filters
-        and not pd.isna(
-            review_percentage
-        )
+        and not pd.isna(percentage)
     ):
-        minimum_review_percentage = float(
+        minimum_percentage = float(
             filters[
                 "minimum_review_percentage"
             ]
         )
 
-        match_reasons.append(
-            f"Its {float(review_percentage):.2f}% positive "
-            f"review score meets your "
-            f"{minimum_review_percentage:.2f}% requirement."
+        reasons.append(
+            f"Its {float(percentage):.2f}% positive "
+            f"rating meets your "
+            f"{minimum_percentage:.2f}% requirement."
         )
 
     if "platform" in filters:
@@ -339,10 +744,11 @@ def build_match_reasons(
             filters["platform"]
         )
 
-        if requested_platform.casefold() in (
-            platforms.casefold()
+        if (
+            requested_platform.casefold()
+            in platforms.casefold()
         ):
-            match_reasons.append(
+            reasons.append(
                 f"It supports {requested_platform}."
             )
 
@@ -351,9 +757,9 @@ def build_match_reasons(
             filters["play_mode"]
         )
 
-        match_reasons.append(
-            f"Its official Steam categories support "
-            f"{requested_play_mode}."
+        reasons.append(
+            f"Its official Steam features support "
+            f"{requested_play_mode} play."
         )
 
     if (
@@ -366,9 +772,9 @@ def build_match_reasons(
             ]
         )
 
-        match_reasons.append(
+        reasons.append(
             f"It was released in {int(release_year)}, "
-            f"which is after {requested_year}."
+            f"after your {requested_year} cutoff."
         )
 
     if (
@@ -381,10 +787,10 @@ def build_match_reasons(
             ]
         )
 
-        match_reasons.append(
-            f"It was released in {int(release_year)}, "
-            f"which satisfies your request for games "
-            f"released since {requested_year}."
+        reasons.append(
+            f"Its {int(release_year)} release fits "
+            f"your request for games since "
+            f"{requested_year}."
         )
 
     if (
@@ -397,9 +803,9 @@ def build_match_reasons(
             ]
         )
 
-        match_reasons.append(
+        reasons.append(
             f"It was released in {int(release_year)}, "
-            f"which is before {requested_year}."
+            f"before {requested_year}."
         )
 
     concept_score = pd.to_numeric(
@@ -416,102 +822,355 @@ def build_match_reasons(
             not pd.isna(concept_score)
             and float(concept_score) >= 0.80
         ):
-            match_reasons.append(
-                f"Its genres, tags, and description strongly "
-                f"match: {concept_text}."
+            reasons.append(
+                f"Its genres and tags strongly match "
+                f"your interest in {concept_text}."
             )
 
         elif (
             not pd.isna(concept_score)
             and float(concept_score) >= 0.40
         ):
-            match_reasons.append(
-                f"Its metadata partially matches: "
+            reasons.append(
+                f"Its metadata partially matches "
                 f"{concept_text}."
             )
 
-    if not match_reasons:
-        match_reasons.append(
-            "Its retrieved metadata has strong semantic "
-            "similarity to your request."
+    if not reasons:
+        reasons.append(
+            "Its overall metadata is highly relevant "
+            "to your request."
         )
 
-    return match_reasons
+    return reasons
 
 
-def display_sidebar() -> bool:
-    """Display application details and return generation preference."""
+def display_sidebar() -> tuple[
+    bool,
+    bool,
+]:
+    """Display settings, examples, history, and shortlist."""
 
     with st.sidebar:
-        st.header("🎮 GameWise AI")
+        st.markdown(
+            "## 🎮 GameWise AI"
+        )
 
-        st.write(
-            "GameWise combines hard metadata filters, "
-            "semantic retrieval, concept matching, "
-            "play-mode preferences, and review quality."
+        st.caption(
+            "Natural-language Steam discovery using "
+            "filters, semantic retrieval, and grounded "
+            "recommendations."
         )
 
         st.divider()
 
-        use_grounded_answer = st.toggle(
+        generate_summary = st.toggle(
             "Generate recommendation summary",
             value=True,
         )
 
-        st.caption(
-            "When an OpenAI API key is available, "
-            "GameWise uses the configured model. "
-            "Otherwise, it creates a local grounded summary."
+        developer_mode = st.toggle(
+            "Developer details",
+            value=False,
         )
+
+        api_key_available = bool(
+            os.getenv(
+                "OPENAI_API_KEY",
+                "",
+            ).strip()
+        )
+
+        if api_key_available:
+            st.success(
+                "AI summary is ready.",
+                icon="✨",
+            )
+
+        else:
+            st.info(
+                "Local summary mode is active.",
+                icon="🧩",
+            )
 
         st.divider()
 
-        st.subheader(
-            "Example searches"
+        st.markdown(
+            "### Try an example"
         )
 
-        st.code(
-            "a relaxing single-player casual game under $15",
-            language=None,
+        for (
+            button_label,
+            query,
+        ) in EXAMPLE_SEARCHES:
+            st.button(
+                button_label,
+                key=f"example_{button_label}",
+                use_container_width=True,
+                on_click=select_example_query,
+                args=(query,),
+            )
+
+        history = st.session_state.get(
+            "search_history",
+            [],
         )
 
-        st.code(
-            (
-                "a cooperative survival game under $20 "
-                "with at least 80% positive reviews"
-            ),
-            language=None,
+        if history:
+            st.divider()
+
+            title_column, clear_column = (
+                st.columns(
+                    [3, 1]
+                )
+            )
+
+            with title_column:
+                st.markdown(
+                    "### Recent searches"
+                )
+
+            with clear_column:
+                st.button(
+                    "Clear",
+                    key="clear_history",
+                    on_click=clear_search_history,
+                )
+
+            for index, query in enumerate(
+                history
+            ):
+                label = (
+                    query
+                    if len(query) <= 42
+                    else query[:39] + "..."
+                )
+
+                st.button(
+                    label,
+                    key=f"history_{index}",
+                    use_container_width=True,
+                    on_click=select_example_query,
+                    args=(query,),
+                )
+
+        shortlist = st.session_state.get(
+            "shortlist",
+            [],
         )
 
-        st.code(
-            "a free psychological horror game",
-            language=None,
-        )
+        if shortlist:
+            st.divider()
 
-        st.code(
-            (
-                "a turn-based tactical strategy game "
-                "under $20 for Linux"
-            ),
-            language=None,
-        )
+            title_column, clear_column = (
+                st.columns(
+                    [3, 1]
+                )
+            )
+
+            with title_column:
+                st.markdown(
+                    "### 💜 Shortlist"
+                )
+
+            with clear_column:
+                st.button(
+                    "Clear",
+                    key="clear_shortlist",
+                    on_click=clear_shortlist,
+                )
+
+            for saved_game in shortlist:
+                game_name = saved_game[
+                    "name"
+                ]
+
+                steam_url = saved_game[
+                    "url"
+                ]
+
+                if steam_url:
+                    st.markdown(
+                        f"- [{game_name}]({steam_url})"
+                    )
+
+                else:
+                    st.markdown(
+                        f"- {game_name}"
+                    )
 
         st.divider()
 
         st.caption(
-            "All recommendations are grounded in the "
-            "local Steam game dataset."
+            "Prices and metadata come from the "
+            "local dataset snapshot and may differ "
+            "from Steam."
         )
 
-    return use_grounded_answer
+    return (
+        generate_summary,
+        developer_mode,
+    )
+
+
+def display_hero() -> None:
+    """Display the main introduction."""
+
+    st.markdown(
+        """
+        <div class="hero">
+            <div class="hero-title">
+                🎮 GameWise AI
+            </div>
+            <div class="hero-subtitle">
+                Tell GameWise what you feel like playing.
+                It will understand your budget, platform,
+                preferred play mode, review expectations,
+                and game style before recommending the
+                strongest matches.
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def display_search_form() -> tuple[
+    bool,
+    int,
+]:
+    """Display the natural-language search controls."""
+
+    with st.form(
+        "game_search_form"
+    ):
+        st.markdown(
+            "### What would you like to play?"
+        )
+
+        st.text_area(
+            "Describe your ideal game",
+            key="query_input",
+            placeholder=(
+                "Example: a relaxing single-player "
+                "farming game under $20 for Mac"
+            ),
+            height=92,
+            label_visibility="collapsed",
+        )
+
+        slider_column, button_column = (
+            st.columns(
+                [2, 1]
+            )
+        )
+
+        with slider_column:
+            top_k = st.slider(
+                "Number of recommendations",
+                min_value=3,
+                max_value=10,
+                value=5,
+                step=1,
+            )
+
+        with button_column:
+            st.write("")
+            st.write("")
+
+            submitted = (
+                st.form_submit_button(
+                    "✨ Find my games",
+                    use_container_width=True,
+                )
+            )
+
+    st.caption(
+        "Tip: Include a genre, mood, platform, "
+        "budget, play mode, or review requirement."
+    )
+
+    return (
+        submitted,
+        top_k,
+    )
+
+
+def display_empty_home() -> None:
+    """Explain how GameWise works before the first search."""
+
+    st.markdown(
+        '<div class="section-title">'
+        "How it works"
+        "</div>",
+        unsafe_allow_html=True,
+    )
+
+    columns = st.columns(3)
+
+    cards = [
+        (
+            columns[0],
+            "💬",
+            "Describe what you want",
+            (
+                "Write naturally instead of "
+                "completing a long filter form."
+            ),
+        ),
+        (
+            columns[1],
+            "🔎",
+            "GameWise understands",
+            (
+                "Budget, platform, year, reviews, "
+                "concepts, and play mode are "
+                "interpreted automatically."
+            ),
+        ),
+        (
+            columns[2],
+            "✨",
+            "Compare grounded matches",
+            (
+                "Read clear reasons, open Steam "
+                "pages, and save favourites."
+            ),
+        ),
+    ]
+
+    for (
+        column,
+        icon,
+        title,
+        description,
+    ) in cards:
+        with column:
+            st.markdown(
+                (
+                    '<div class="feature-card">'
+                    f'<div class="feature-icon">'
+                    f"{icon}"
+                    "</div>"
+                    f'<div class="feature-title">'
+                    f"{title}"
+                    "</div>"
+                    f'<div class="feature-text">'
+                    f"{description}"
+                    "</div>"
+                    "</div>"
+                ),
+                unsafe_allow_html=True,
+            )
 
 
 def display_filter_summary(
     filters: dict[str, object],
     requested_concepts: list[str],
     candidate_count: int,
+    result_count: int,
 ) -> None:
-    """Display interpreted hard filters and concepts."""
+    """Display how the request was interpreted."""
 
     st.markdown(
         '<div class="section-title">'
@@ -520,86 +1179,95 @@ def display_filter_summary(
         unsafe_allow_html=True,
     )
 
+    filter_values = [
+        format_filter_value(
+            name,
+            value,
+        )
+        for (
+            name,
+            value,
+        ) in filters.items()
+    ]
+
     filter_column, concept_column = (
         st.columns(2)
     )
 
     with filter_column:
         st.markdown(
-            "**Structured filters**"
+            "**Requirements**"
         )
 
-        if filters:
-            for (
-                filter_name,
-                filter_value,
-            ) in filters.items():
-                st.write(
-                    "✓ "
-                    + format_filter_value(
-                        filter_name,
-                        filter_value,
-                    )
-                )
+        if filter_values:
+            render_chips(
+                filter_values,
+                "filter-chip",
+            )
+
         else:
             st.caption(
-                "No structured filters detected."
+                "No structured requirements were detected."
             )
 
     with concept_column:
         st.markdown(
-            "**Detected concepts**"
+            "**Game style and concepts**"
         )
 
         if requested_concepts:
-            for concept_name in (
-                requested_concepts
-            ):
-                st.write(
-                    f"✓ {concept_name}"
-                )
-        else:
-            st.caption(
-                "No clear genre, mood, or gameplay "
-                "concept was detected."
+            render_chips(
+                requested_concepts,
+                "concept-chip",
             )
 
-    st.markdown(
-        (
-            '<div class="result-count">'
-            f"{candidate_count:,} games remained after "
-            "applying the hard filters."
-            "</div>"
-        ),
-        unsafe_allow_html=True,
+        else:
+            st.caption(
+                "No clear style or genre was detected."
+            )
+
+    candidate_column, result_column = (
+        st.columns(2)
     )
+
+    with candidate_column:
+        st.metric(
+            "Matching candidates",
+            f"{candidate_count:,}",
+        )
+
+    with result_column:
+        st.metric(
+            "Recommendations returned",
+            f"{result_count:,}",
+        )
 
 
 def display_clarification_message(
     candidate_count: int,
 ) -> None:
-    """Ask the user to provide more useful preferences."""
+    """Ask the user to make a broad request more specific."""
 
     st.info(
-        f"Your request is too broad. "
-        f"{candidate_count:,} games satisfy "
-        "the current conditions."
+        (
+            f"Your request matches "
+            f"{candidate_count:,} games, "
+            "so more detail is needed for a "
+            "useful recommendation."
+        ),
+        icon="💡",
     )
 
     st.markdown(
         """
-Please add at least one preference:
+Add one or more details:
 
 - **Genre:** RPG, strategy, horror, racing
-- **Mood:** relaxing, scary, story-rich
+- **Mood:** relaxing, scary, emotional, story-rich
 - **Play mode:** single-player, co-op, multiplayer
 - **Platform:** Windows, Mac, Linux
 - **Quality:** at least 80% positive reviews
         """
-    )
-
-    st.markdown(
-        "**Example**"
     )
 
     st.code(
@@ -608,40 +1276,248 @@ Please add at least one preference:
     )
 
 
-def display_generation_status(
-    generation_mode: str,
-) -> None:
-    """Display which answer-generation mode was used."""
+def display_no_results_message() -> None:
+    """Explain that no game satisfies every condition."""
 
-    if generation_mode == "openai":
-        st.caption(
-            "The recommendation summary was generated "
-            "from the retrieved Steam records."
+    st.warning(
+        (
+            "No games satisfy every requested condition. "
+            "GameWise did not silently weaken or remove "
+            "any requirement."
+        ),
+        icon="🔍",
+    )
+
+    st.markdown(
+        """
+Try one small change:
+
+- Increase the maximum price
+- Lower the review requirement
+- Remove the release-year restriction
+- Try another platform
+- Change co-op to multiplayer
+        """
+    )
+
+
+def sort_results(
+    search_results: pd.DataFrame,
+    sort_option: str,
+) -> pd.DataFrame:
+    """Sort retrieved games for easier comparison."""
+
+    sorted_results = (
+        search_results.copy()
+    )
+
+    if sort_option == "Highest reviews":
+        sorted_results = (
+            sorted_results.sort_values(
+                by=[
+                    "positive_review_percentage",
+                    "total_reviews",
+                ],
+                ascending=[
+                    False,
+                    False,
+                ],
+            )
         )
 
-    elif generation_mode == "local_fallback":
-        st.caption(
-            "No API key was detected. GameWise used "
-            "a local grounded recommendation summary."
+    elif sort_option == "Lowest price":
+        sorted_results = (
+            sorted_results.sort_values(
+                by=[
+                    "price_usd",
+                    "hybrid_score",
+                ],
+                ascending=[
+                    True,
+                    False,
+                ],
+            )
         )
 
-    elif (
-        generation_mode
+    elif sort_option == "Newest releases":
+        sorted_results = (
+            sorted_results.sort_values(
+                by=[
+                    "release_year",
+                    "hybrid_score",
+                ],
+                ascending=[
+                    False,
+                    False,
+                ],
+            )
+        )
+
+    return sorted_results.reset_index(
+        drop=True
+    )
+
+
+def display_result_toolbar(
+    search_results: pd.DataFrame,
+) -> tuple[
+    pd.DataFrame,
+    str,
+]:
+    """Display sorting and CSV download controls."""
+
+    sort_column, download_column = (
+        st.columns(
+            [2, 1]
+        )
+    )
+
+    with sort_column:
+        sort_option = st.selectbox(
+            "Sort recommendations",
+            options=[
+                "Best match",
+                "Highest reviews",
+                "Lowest price",
+                "Newest releases",
+            ],
+        )
+
+    sorted_results = sort_results(
+        search_results,
+        sort_option,
+    )
+
+    export_columns = [
+        column_name
+        for column_name in [
+            "name",
+            "price_usd",
+            "positive_review_percentage",
+            "total_reviews",
+            "release_year",
+            "genres",
+            "categories",
+            "tags",
+            "platforms",
+            "steam_store_url",
+        ]
+        if column_name
+        in sorted_results.columns
+    ]
+
+    csv_data = (
+        sorted_results[
+            export_columns
+        ]
+        .to_csv(
+            index=False
+        )
+        .encode("utf-8-sig")
+    )
+
+    with download_column:
+        st.write("")
+        st.write("")
+
+        st.download_button(
+            "⬇ Download results",
+            data=csv_data,
+            file_name=(
+                "gamewise_recommendations.csv"
+            ),
+            mime="text/csv",
+            use_container_width=True,
+        )
+
+    return (
+        sorted_results,
+        sort_option,
+    )
+
+
+def generation_label(
+    mode: str,
+) -> str:
+    """Return a readable summary-mode label."""
+
+    if mode == "openai":
+        return (
+            "✨ AI-generated grounded summary"
+        )
+
+    if mode == "local_fallback":
+        return (
+            "🧩 Local grounded summary"
+        )
+
+    if (
+        mode
         == "local_fallback_after_error"
     ):
-        st.caption(
-            "The external model request was unavailable. "
-            "GameWise used a local grounded summary."
+        return (
+            "🧩 Local fallback after model error"
+        )
+
+    return (
+        "Grounded recommendation summary"
+    )
+
+
+def display_generated_summary(
+    query: str,
+    search_results: pd.DataFrame,
+    filters: dict[str, object],
+    requested_concepts: list[str],
+) -> None:
+    """Generate and display a grounded recommendation summary."""
+
+    with st.spinner(
+        "Writing a grounded recommendation..."
+    ):
+        answer, mode = (
+            run_cached_generation(
+                query=query,
+                search_results=search_results,
+                filters=filters,
+                requested_concepts=(
+                    requested_concepts
+                ),
+            )
+        )
+
+    st.markdown(
+        '<div class="section-title">'
+        "GameWise summary"
+        "</div>",
+        unsafe_allow_html=True,
+    )
+
+    with st.container(
+        border=True
+    ):
+        st.markdown(
+            (
+                '<span class="summary-mode">'
+                f"{html.escape(generation_label(mode))}"
+                "</span>"
+            ),
+            unsafe_allow_html=True,
+        )
+
+        st.markdown(
+            answer
         )
 
 
-def display_game_result(
+def display_game_card(
     result_number: int,
     row: pd.Series,
     filters: dict[str, object],
     requested_concepts: list[str],
+    developer_mode: bool,
 ) -> None:
-    """Display one retrieved game recommendation."""
+    """Display one polished recommendation card."""
 
     game_name = safe_text(
         row.get("name"),
@@ -657,45 +1533,79 @@ def display_game_result(
         row.get("short_description")
     )
 
+    match_label, match_class = (
+        get_match_label(
+            row
+        )
+    )
+
     with st.container(
         border=True
     ):
-        title_column, metric_column = (
+        title_column, match_column = (
             st.columns(
-                [3, 1]
+                [4, 1]
             )
         )
 
         with title_column:
             st.caption(
-                f"Recommendation {result_number}"
+                "🏆 Best overall match"
+                if result_number == 1
+                else (
+                    f"Recommendation "
+                    f"{result_number}"
+                )
             )
 
             st.markdown(
                 f"### {game_name}"
             )
 
-            st.write(
-                description
+        with match_column:
+            st.markdown(
+                (
+                    f'<span class="match-pill '
+                    f'{match_class}">'
+                    f"{html.escape(match_label)}"
+                    "</span>"
+                ),
+                unsafe_allow_html=True,
             )
 
-        with metric_column:
+        st.write(
+            description
+        )
+
+        price_column, review_column, year_column = (
+            st.columns(3)
+        )
+
+        with price_column:
             st.metric(
                 "Price",
-                format_price(row),
-            )
-
-            st.metric(
-                "Release year",
-                format_release_year(
-                    row.get("release_year")
+                format_price(
+                    row
                 ),
             )
 
-        st.markdown(
-            f"**Reviews:** "
-            f"{format_review_summary(row)}"
-        )
+        with review_column:
+            st.metric(
+                "Positive reviews",
+                format_review_percentage(
+                    row
+                ),
+            )
+
+        with year_column:
+            st.metric(
+                "Release year",
+                format_release_year(
+                    row.get(
+                        "release_year"
+                    )
+                ),
+            )
 
         st.markdown(
             f"**Genres:** "
@@ -707,205 +1617,215 @@ def display_game_result(
             f"{safe_text(row.get('platforms'))}"
         )
 
-        st.markdown(
-            f"**Tags:** "
-            f"{format_tags(row.get('tags'))}"
+        tags = get_tags(
+            row.get("tags")
         )
 
+        if tags:
+            render_chips(
+                tags,
+                "tag-chip",
+            )
+
         st.markdown(
-            "**Why it matches your request**"
+            "#### Why it fits"
         )
 
-        match_reasons = build_match_reasons(
+        reasons = build_match_reasons(
             row=row,
             filters=filters,
             requested_concepts=requested_concepts,
         )
 
-        for match_reason in match_reasons:
+        for reason in reasons:
             st.write(
-                f"✓ {match_reason}"
+                f"✅ {reason}"
             )
 
-        if steam_url:
-            st.link_button(
-                "Open on Steam",
-                steam_url,
-                use_container_width=False,
+        st.caption(
+            format_review_summary(
+                row
             )
+        )
 
-        with st.expander(
-            "View ranking details"
-        ):
-            hybrid_score = pd.to_numeric(
-                row.get("hybrid_score"),
-                errors="coerce",
-            )
+        steam_column, save_column = (
+            st.columns(2)
+        )
 
-            semantic_score = pd.to_numeric(
-                row.get("semantic_score"),
-                errors="coerce",
-            )
-
-            concept_score = pd.to_numeric(
-                row.get("concept_score"),
-                errors="coerce",
-            )
-
-            if not pd.isna(
-                hybrid_score
-            ):
-                st.write(
-                    "Hybrid score:",
-                    f"{float(hybrid_score):.4f}",
+        with steam_column:
+            if steam_url:
+                st.link_button(
+                    "Open on Steam ↗",
+                    steam_url,
+                    use_container_width=True,
                 )
 
-            if not pd.isna(
-                semantic_score
+        with save_column:
+            if st.button(
+                "♡ Save to shortlist",
+                key=(
+                    f"save_{result_number}_"
+                    f"{game_name}"
+                ),
+                use_container_width=True,
             ):
-                st.write(
-                    "Semantic score:",
-                    f"{float(semantic_score):.4f}",
+                add_to_shortlist(
+                    game_name,
+                    steam_url,
                 )
 
-            if not pd.isna(
-                concept_score
+        if developer_mode:
+            with st.expander(
+                "🛠 Developer ranking details"
             ):
-                st.write(
-                    "Concept score:",
-                    f"{float(concept_score):.4f}",
-                )
+                fields = [
+                    (
+                        "Hybrid score",
+                        "hybrid_score",
+                    ),
+                    (
+                        "Semantic score",
+                        "semantic_score",
+                    ),
+                    (
+                        "Concept score",
+                        "concept_score",
+                    ),
+                ]
 
-            if "play_mode" in filters:
-                play_mode_score = (
-                    pd.to_numeric(
+                if "play_mode" in filters:
+                    fields.append(
+                        (
+                            "Play-mode score",
+                            "play_mode_score",
+                        )
+                    )
+
+                for (
+                    label,
+                    column_name,
+                ) in fields:
+                    value = pd.to_numeric(
                         row.get(
-                            "play_mode_score"
+                            column_name
                         ),
                         errors="coerce",
                     )
+
+                    if not pd.isna(
+                        value
+                    ):
+                        st.write(
+                            f"{label}:",
+                            f"{float(value):.4f}",
+                        )
+
+                st.write(
+                    "Official categories:",
+                    safe_text(
+                        row.get(
+                            "categories"
+                        )
+                    ),
                 )
 
-                if not pd.isna(
-                    play_mode_score
-                ):
-                    st.write(
-                        "Play-mode score:",
-                        f"{float(play_mode_score):.4f}",
-                    )
-
-            st.write(
-                "Official categories:",
-                safe_text(
-                    row.get("categories")
-                ),
-            )
+                st.caption(
+                    "These are internal ranking "
+                    "signals, not user ratings."
+                )
 
 
-def clear_previous_search() -> None:
-    """Remove the previous search result from session state."""
+def display_footer() -> None:
+    """Display the dataset disclaimer."""
 
-    st.session_state.pop(
-        "search_payload",
-        None,
-    )
+    st.divider()
 
-    st.session_state.pop(
-        "submitted_query",
-        None,
+    st.caption(
+        "GameWise AI uses a local Steam dataset "
+        "snapshot. Prices, availability, and store "
+        "information may change."
     )
 
 
 def main() -> None:
-    """Run the GameWise Streamlit application."""
+    """Run the GameWise application."""
 
+    initialize_session_state()
     apply_page_style()
 
-    use_grounded_answer = (
+    generate_summary, developer_mode = (
         display_sidebar()
     )
 
-    st.markdown(
-        '<div class="gamewise-title">'
-        "🎮 GameWise AI"
-        "</div>",
-        unsafe_allow_html=True,
+    display_hero()
+
+    form_submitted, top_k = (
+        display_search_form()
     )
 
-    st.markdown(
-        '<div class="gamewise-subtitle">'
-        "Describe the kind of game you want. "
-        "GameWise will apply your requirements, "
-        "retrieve matching Steam games, and explain "
-        "why each recommendation fits."
-        "</div>",
-        unsafe_allow_html=True,
+    auto_submit = bool(
+        st.session_state.pop(
+            "auto_submit",
+            False,
+        )
     )
 
-    with st.form(
-        "game_search_form"
+    if (
+        form_submitted
+        or auto_submit
     ):
-        query = st.text_input(
-            "What kind of game are you looking for?",
-            placeholder=(
-                "Example: a relaxing single-player "
-                "farming game under $20"
-            ),
+        query = (
+            st.session_state[
+                "query_input"
+            ].strip()
         )
 
-        top_k = st.slider(
-            "Number of recommendations",
-            min_value=3,
-            max_value=10,
-            value=5,
-            step=1,
-        )
-
-        search_submitted = (
-            st.form_submit_button(
-                "Find games",
-                use_container_width=True,
-            )
-        )
-
-    if search_submitted:
-        cleaned_query = (
-            query.strip()
-        )
-
-        if not cleaned_query:
+        if not query:
             st.warning(
-                "Please enter a game request."
+                (
+                    "Please describe the kind of "
+                    "game you are looking for."
+                ),
+                icon="✍️",
             )
 
-            clear_previous_search()
+            st.session_state.pop(
+                "search_payload",
+                None,
+            )
 
         else:
             with st.spinner(
-                "Searching the Steam game collection..."
+                (
+                    "Understanding your request and "
+                    "searching the Steam collection..."
+                )
             ):
-                search_payload = (
+                payload = (
                     run_cached_search(
-                        query=cleaned_query,
+                        query=query,
                         top_k=top_k,
                     )
                 )
 
             st.session_state[
                 "search_payload"
-            ] = search_payload
+            ] = payload
 
             st.session_state[
                 "submitted_query"
-            ] = cleaned_query
+            ] = query
+
+            add_to_search_history(
+                query
+            )
 
     if (
         "search_payload"
         not in st.session_state
     ):
-        st.info(
-            "Enter a request above to begin."
-        )
+        display_empty_home()
+        display_footer()
         return
 
     (
@@ -927,61 +1847,64 @@ def main() -> None:
 
     st.divider()
 
-    st.markdown(
-        f"## Results for `{submitted_query}`"
+    title_column, clear_column = (
+        st.columns(
+            [5, 1]
+        )
     )
+
+    with title_column:
+        st.markdown(
+            "## Your recommendations"
+        )
+
+        st.caption(
+            f'Based on: "{submitted_query}"'
+        )
+
+    with clear_column:
+        st.button(
+            "Clear search",
+            key="clear_current_search",
+            use_container_width=True,
+            on_click=clear_current_search,
+        )
 
     display_filter_summary(
         filters=extracted_filters,
         requested_concepts=requested_concepts,
         candidate_count=candidate_count,
+        result_count=len(
+            search_results
+        ),
     )
 
     if clarification_required:
         display_clarification_message(
             candidate_count
         )
+
+        display_footer()
         return
 
     if search_results.empty:
-        st.warning(
-            "No games satisfy all requested conditions. "
-            "Try increasing the budget, lowering the "
-            "review requirement, changing the platform, "
-            "or removing one condition."
-        )
+        display_no_results_message()
+        display_footer()
         return
 
-    if use_grounded_answer:
-        with st.spinner(
-            "Writing a grounded recommendation..."
-        ):
-            (
-                generated_answer,
-                generation_mode,
-            ) = run_cached_generation(
-                query=submitted_query,
-                search_results=search_results,
-                filters=extracted_filters,
-                requested_concepts=requested_concepts,
-            )
-
-        st.markdown(
-            '<div class="section-title">'
-            "GameWise recommendation"
-            "</div>",
-            unsafe_allow_html=True,
+    displayed_results, sort_option = (
+        display_result_toolbar(
+            search_results
         )
+    )
 
-        st.markdown(
-            generated_answer
+    if generate_summary:
+        display_generated_summary(
+            query=submitted_query,
+            search_results=displayed_results,
+            filters=extracted_filters,
+            requested_concepts=requested_concepts,
         )
-
-        display_generation_status(
-            generation_mode
-        )
-
-        st.divider()
 
     st.markdown(
         '<div class="section-title">'
@@ -990,19 +1913,28 @@ def main() -> None:
         unsafe_allow_html=True,
     )
 
+    if sort_option != "Best match":
+        st.caption(
+            f"Results are sorted by "
+            f"{sort_option.lower()}."
+        )
+
     for (
         result_number,
-        (_, result_row),
+        (_, row),
     ) in enumerate(
-        search_results.iterrows(),
+        displayed_results.iterrows(),
         start=1,
     ):
-        display_game_result(
+        display_game_card(
             result_number=result_number,
-            row=result_row,
+            row=row,
             filters=extracted_filters,
             requested_concepts=requested_concepts,
+            developer_mode=developer_mode,
         )
+
+    display_footer()
 
 
 if __name__ == "__main__":
