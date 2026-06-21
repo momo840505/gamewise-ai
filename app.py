@@ -48,12 +48,18 @@ st.set_page_config(
     page_title="GameWise AI",
     page_icon="🎮",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="auto",
 )
 
 
 def apply_page_style() -> None:
-    """Apply a polished visual style."""
+    """
+    Apply responsive styling.
+
+    The native Streamlit sidebar is intentionally left alone.
+    Its width, position, transform and close controls are not
+    modified, so the mobile drawer can open and close normally.
+    """
 
     st.markdown(
         """
@@ -64,10 +70,26 @@ def apply_page_style() -> None:
             --pink: #eb72ad;
             --text: #222238;
             --muted: #6e6e82;
+            --surface: #ffffff;
+            --surface-soft: #f8f7ff;
             --border: rgba(111, 82, 237, 0.16);
+            --shadow: 0 12px 35px rgba(83, 66, 150, 0.06);
+        }
+
+        html,
+        body,
+        .stApp,
+        [data-testid="stAppViewContainer"] {
+            color-scheme: light !important;
+        }
+
+        html,
+        body {
+            overflow-x: hidden !important;
         }
 
         .stApp {
+            color: var(--text) !important;
             background:
                 radial-gradient(
                     circle at 8% 0%,
@@ -82,12 +104,29 @@ def apply_page_style() -> None:
                 #fbfbff;
         }
 
-        .block-container {
-            max-width: 1180px;
-            padding-top: 1.8rem;
-            padding-bottom: 4rem;
+        [data-testid="stAppViewContainer"] {
+            overflow-x: hidden !important;
         }
 
+        [data-testid="stHeader"] {
+            background: rgba(251, 251, 255, 0.97) !important;
+            border-bottom: 1px solid rgba(111, 82, 237, 0.08);
+        }
+
+        .block-container {
+            width: 100% !important;
+            max-width: 1180px !important;
+            padding-top: 1.5rem !important;
+            padding-right: 1.15rem !important;
+            padding-bottom: 4rem !important;
+            padding-left: 1.15rem !important;
+        }
+
+        /*
+        Only change the sidebar background.
+        Do not control width, transform, position,
+        close button or collapsed button.
+        */
         [data-testid="stSidebar"] {
             background:
                 linear-gradient(
@@ -95,15 +134,16 @@ def apply_page_style() -> None:
                     #f5f2ff 0%,
                     #fcfbff 60%,
                     #ffffff 100%
-                );
-            border-right: 1px solid var(--border);
+                ) !important;
+            border-right: 1px solid var(--border) !important;
         }
 
         .hero {
             position: relative;
             overflow: hidden;
-            padding: 2.2rem 2.4rem;
-            margin-bottom: 1.25rem;
+            width: 100%;
+            padding: 2.1rem 2.3rem;
+            margin-bottom: 1.1rem;
             border: 1px solid rgba(111, 82, 237, 0.18);
             border-radius: 24px;
             background:
@@ -112,8 +152,7 @@ def apply_page_style() -> None:
                     rgba(111, 82, 237, 0.13),
                     rgba(235, 114, 173, 0.08)
                 );
-            box-shadow:
-                0 18px 50px rgba(83, 66, 150, 0.08);
+            box-shadow: 0 18px 50px rgba(83, 66, 150, 0.08);
         }
 
         .hero::after {
@@ -130,14 +169,15 @@ def apply_page_style() -> None:
                     rgba(111, 82, 237, 0.22),
                     rgba(235, 114, 173, 0.14)
                 );
+            pointer-events: none;
         }
 
         .hero-title {
             position: relative;
             z-index: 1;
             margin-bottom: 0.65rem;
-            color: var(--text);
-            font-size: 3rem;
+            color: var(--text) !important;
+            font-size: clamp(2.05rem, 5vw, 3rem);
             font-weight: 850;
             line-height: 1.05;
         }
@@ -146,23 +186,32 @@ def apply_page_style() -> None:
             position: relative;
             z-index: 1;
             max-width: 800px;
-            color: var(--muted);
-            font-size: 1.08rem;
-            line-height: 1.65;
+            color: var(--muted) !important;
+            font-size: 1.05rem;
+            line-height: 1.62;
         }
 
         .section-title {
             margin-top: 0.7rem;
             margin-bottom: 0.8rem;
-            color: var(--text);
+            color: var(--text) !important;
             font-size: 1.35rem;
             font-weight: 780;
         }
 
         .filter-chip,
         .concept-chip,
-        .tag-chip {
+        .tag-chip,
+        .match-pill,
+        .summary-mode {
             display: inline-block;
+            max-width: 100%;
+            overflow-wrap: anywhere;
+        }
+
+        .filter-chip,
+        .concept-chip,
+        .tag-chip {
             margin: 0.16rem 0.28rem 0.16rem 0;
             border-radius: 999px;
             line-height: 1.2;
@@ -172,7 +221,7 @@ def apply_page_style() -> None:
             padding: 0.45rem 0.72rem;
             border: 1px solid rgba(111, 82, 237, 0.18);
             background: rgba(111, 82, 237, 0.10);
-            color: #4f39ba;
+            color: #4f39ba !important;
             font-size: 0.87rem;
             font-weight: 650;
         }
@@ -181,7 +230,7 @@ def apply_page_style() -> None:
             padding: 0.45rem 0.72rem;
             border: 1px solid rgba(235, 114, 173, 0.20);
             background: rgba(235, 114, 173, 0.10);
-            color: #a74273;
+            color: #a74273 !important;
             font-size: 0.87rem;
             font-weight: 650;
         }
@@ -190,15 +239,15 @@ def apply_page_style() -> None:
             padding: 0.30rem 0.56rem;
             border: 1px solid #e6e6ef;
             background: #f4f4fa;
-            color: #5d5d70;
+            color: #5d5d70 !important;
             font-size: 0.78rem;
         }
 
         .match-pill {
-            display: inline-block;
             padding: 0.40rem 0.70rem;
             border-radius: 999px;
-            white-space: nowrap;
+            white-space: normal;
+            text-align: center;
             font-size: 0.82rem;
             font-weight: 750;
         }
@@ -206,33 +255,35 @@ def apply_page_style() -> None:
         .match-excellent {
             border: 1px solid #bdebd2;
             background: #e7f8ef;
-            color: #176b43;
+            color: #176b43 !important;
         }
 
         .match-strong {
             border: 1px solid #d8d0ff;
             background: #f0edff;
-            color: #4e38b8;
+            color: #4e38b8 !important;
         }
 
         .match-good {
             border: 1px solid #f4dfaa;
             background: #fff7df;
-            color: #8b5c16;
+            color: #8b5c16 !important;
         }
 
         .match-partial {
             border: 1px solid #f2cfdb;
             background: #fff0f5;
-            color: #7a5162;
+            color: #7a5162 !important;
         }
 
         .feature-card {
             min-height: 165px;
+            height: 100%;
             padding: 1.2rem;
             border: 1px solid var(--border);
             border-radius: 18px;
-            background: rgba(255, 255, 255, 0.80);
+            background: rgba(255, 255, 255, 0.88);
+            box-shadow: 0 8px 24px rgba(83, 66, 150, 0.04);
         }
 
         .feature-icon {
@@ -242,58 +293,249 @@ def apply_page_style() -> None:
 
         .feature-title {
             margin-bottom: 0.35rem;
-            color: var(--text);
+            color: var(--text) !important;
             font-size: 1rem;
             font-weight: 750;
         }
 
         .feature-text {
-            color: var(--muted);
+            color: var(--muted) !important;
             font-size: 0.90rem;
             line-height: 1.5;
         }
 
         .summary-mode {
-            display: inline-block;
             margin-bottom: 0.65rem;
             padding: 0.28rem 0.58rem;
             border-radius: 999px;
             background: rgba(111, 82, 237, 0.10);
-            color: var(--purple-dark);
+            color: var(--purple-dark) !important;
             font-size: 0.78rem;
             font-weight: 700;
         }
 
         div[data-testid="stForm"] {
-            padding: 1.25rem;
+            width: 100%;
+            padding: 1.15rem;
             border: 1px solid var(--border);
             border-radius: 20px;
-            background: rgba(255, 255, 255, 0.86);
-            box-shadow:
-                0 12px 35px rgba(83, 66, 150, 0.05);
+            background: rgba(255, 255, 255, 0.92);
+            box-shadow: var(--shadow);
         }
 
         div[data-testid="stVerticalBlockBorderWrapper"] {
-            border-color: var(--border);
-            border-radius: 20px;
-            background: rgba(255, 255, 255, 0.92);
-            box-shadow:
-                0 10px 32px rgba(83, 66, 150, 0.055);
+            width: 100%;
+            border-color: var(--border) !important;
+            border-radius: 20px !important;
+            background: rgba(255, 255, 255, 0.96) !important;
+            box-shadow: var(--shadow);
         }
 
         div[data-testid="stMetric"] {
-            padding: 0.72rem 0.82rem;
-            border: 1px solid rgba(111, 82, 237, 0.12);
+            width: 100%;
+            min-width: 0;
+            min-height: 0;
+            padding: 0.78rem 0.86rem;
+            border: 1px solid rgba(111, 82, 237, 0.14);
             border-radius: 14px;
-            background: rgba(248, 247, 255, 0.80);
+            background: var(--surface-soft) !important;
+        }
+
+        [data-testid="stMetricLabel"],
+        [data-testid="stMetricLabel"] *,
+        [data-testid="stMetricValue"],
+        [data-testid="stMetricValue"] * {
+            color: var(--text) !important;
+            opacity: 1 !important;
+        }
+
+        [data-testid="stMetricValue"] {
+            font-size: clamp(1.55rem, 5vw, 2rem) !important;
+            line-height: 1.2 !important;
+        }
+
+        [data-testid="stCaptionContainer"] p,
+        .stCaption,
+        small {
+            color: var(--muted) !important;
+            opacity: 1 !important;
+        }
+
+        [data-baseweb="textarea"] textarea,
+        [data-testid="stTextArea"] textarea,
+        [data-baseweb="input"] input {
+            color: var(--text) !important;
+            background: #f4f5fa !important;
+            -webkit-text-fill-color: var(--text) !important;
+            caret-color: var(--purple-dark) !important;
+            border-radius: 12px !important;
+        }
+
+        [data-baseweb="textarea"] textarea::placeholder,
+        [data-testid="stTextArea"] textarea::placeholder,
+        [data-baseweb="input"] input::placeholder {
+            color: #77788c !important;
+            opacity: 1 !important;
+            -webkit-text-fill-color: #77788c !important;
+        }
+
+        [data-baseweb="select"] > div,
+        [data-testid="stSelectbox"] [data-baseweb="select"] > div {
+            color: var(--text) !important;
+            background: #ffffff !important;
+            border-color: rgba(111, 82, 237, 0.22) !important;
+            border-radius: 12px !important;
+        }
+
+        [data-baseweb="select"] *,
+        [role="listbox"] *,
+        [data-testid="stSelectbox"] * {
+            color: var(--text) !important;
+        }
+
+        [role="listbox"] {
+            background: #ffffff !important;
         }
 
         div[data-testid="stButton"] button,
         div[data-testid="stFormSubmitButton"] button,
         div[data-testid="stDownloadButton"] button,
         div[data-testid="stLinkButton"] a {
-            min-height: 2.7rem;
-            border-radius: 12px;
+            min-height: 2.8rem;
+            border: 1px solid rgba(111, 82, 237, 0.22) !important;
+            border-radius: 12px !important;
+            color: var(--text) !important;
+            background: #ffffff !important;
+            box-shadow: none !important;
+        }
+
+        div[data-testid="stButton"] button *,
+        div[data-testid="stFormSubmitButton"] button *,
+        div[data-testid="stDownloadButton"] button *,
+        div[data-testid="stLinkButton"] a * {
+            color: var(--text) !important;
+        }
+
+        div[data-testid="stButton"] button:hover,
+        div[data-testid="stFormSubmitButton"] button:hover,
+        div[data-testid="stDownloadButton"] button:hover,
+        div[data-testid="stLinkButton"] a:hover {
+            border-color: rgba(111, 82, 237, 0.50) !important;
+            color: var(--purple-dark) !important;
+            background: #f7f5ff !important;
+        }
+
+        [data-testid="stAlert"],
+        [data-testid="stExpander"] {
+            border-radius: 14px !important;
+        }
+
+        [data-testid="stExpander"] {
+            border-color: var(--border) !important;
+            background: #ffffff !important;
+        }
+
+        [data-testid="stExpander"] summary,
+        [data-testid="stExpander"] summary * {
+            color: var(--text) !important;
+        }
+
+        @media screen and (max-width: 768px) {
+            .block-container {
+                max-width: 100% !important;
+                padding-top: 0.8rem !important;
+                padding-right: 0.72rem !important;
+                padding-bottom: 3rem !important;
+                padding-left: 0.72rem !important;
+            }
+
+            .hero {
+                padding: 1.2rem 1rem;
+                margin-bottom: 0.9rem;
+                border-radius: 18px;
+            }
+
+            .hero::after {
+                width: 125px;
+                height: 125px;
+                right: -42px;
+                top: -56px;
+            }
+
+            .hero-title {
+                max-width: calc(100% - 18px);
+                margin-bottom: 0.5rem;
+                font-size: 1.85rem;
+                line-height: 1.08;
+            }
+
+            .hero-subtitle {
+                font-size: 0.92rem;
+                line-height: 1.48;
+            }
+
+            .section-title {
+                margin-top: 0.4rem;
+                margin-bottom: 0.6rem;
+                font-size: 1.15rem;
+            }
+
+            div[data-testid="stForm"] {
+                padding: 0.9rem;
+                border-radius: 16px;
+            }
+
+            .feature-card {
+                min-height: 0;
+                height: auto;
+                padding: 1rem;
+            }
+
+            div[data-testid="stMetric"] {
+                min-height: 0 !important;
+                padding: 0.78rem 0.85rem !important;
+            }
+
+            [data-testid="stMetricValue"] {
+                font-size: 1.7rem !important;
+            }
+
+            [data-testid="stTextArea"] textarea {
+                min-height: 108px !important;
+                font-size: 16px !important;
+            }
+
+            div[data-testid="stButton"] button,
+            div[data-testid="stFormSubmitButton"] button,
+            div[data-testid="stDownloadButton"] button,
+            div[data-testid="stLinkButton"] a {
+                width: 100% !important;
+                min-height: 3rem !important;
+                font-size: 0.95rem !important;
+            }
+
+            [data-testid="stMarkdownContainer"] h2 {
+                font-size: 1.5rem !important;
+                line-height: 1.2 !important;
+            }
+
+            [data-testid="stMarkdownContainer"] h3 {
+                font-size: 1.24rem !important;
+                line-height: 1.25 !important;
+            }
+
+            [data-testid="stMarkdownContainer"] p,
+            [data-testid="stMarkdownContainer"] li {
+                font-size: 0.94rem;
+                line-height: 1.48;
+            }
+
+            iframe,
+            img,
+            video,
+            canvas {
+                max-width: 100% !important;
+            }
         }
         </style>
         """,
@@ -318,7 +560,7 @@ def initialize_session_state() -> None:
 
 
 def display_pending_toast() -> None:
-    """Display a saved notification after Streamlit reruns."""
+    """Display a notification after a rerun."""
 
     message = st.session_state.pop(
         "pending_toast",
@@ -331,6 +573,7 @@ def display_pending_toast() -> None:
             icon="💜",
         )
 
+
 def select_example_query(query: str) -> None:
     """Insert an example query and run it automatically."""
 
@@ -339,14 +582,16 @@ def select_example_query(query: str) -> None:
 
 
 def clear_current_search() -> None:
-    """Clear the current search."""
+    """Clear the active search."""
 
     st.session_state["query_input"] = ""
     st.session_state["auto_submit"] = False
+
     st.session_state.pop(
         "search_payload",
         None,
     )
+
     st.session_state.pop(
         "submitted_query",
         None,
@@ -360,7 +605,7 @@ def clear_search_history() -> None:
 
 
 def clear_shortlist() -> None:
-    """Remove every saved game."""
+    """Remove all saved games."""
 
     st.session_state["shortlist"] = []
 
@@ -411,7 +656,6 @@ def add_to_shortlist(
         st.session_state["pending_toast"] = (
             f"{game_name} is already in your shortlist."
         )
-
         st.rerun()
 
     shortlist.append(
@@ -428,6 +672,7 @@ def add_to_shortlist(
     )
 
     st.rerun()
+
 
 @st.cache_data(show_spinner=False)
 def run_cached_search(
@@ -480,9 +725,9 @@ def safe_text(
     except (TypeError, ValueError):
         pass
 
-    text = str(value).strip()
+    text_value = str(value).strip()
 
-    if text.casefold() in {
+    if text_value.casefold() in {
         "",
         "nan",
         "none",
@@ -491,7 +736,7 @@ def safe_text(
     }:
         return default
 
-    return text
+    return text_value
 
 
 def shorten_text(
@@ -500,16 +745,16 @@ def shorten_text(
 ) -> str:
     """Shorten a long description."""
 
-    text = safe_text(
+    text_value = safe_text(
         value,
         default="No description is available.",
     )
 
-    if len(text) <= maximum_length:
-        return text
+    if len(text_value) <= maximum_length:
+        return text_value
 
     return (
-        text[: maximum_length - 3].rstrip()
+        text_value[: maximum_length - 3].rstrip()
         + "..."
     )
 
@@ -594,7 +839,7 @@ def get_tags(
     value: Any,
     maximum_tags: int = 8,
 ) -> list[str]:
-    """Return the first useful tags."""
+    """Return useful tags."""
 
     tag_text = safe_text(
         value,
@@ -617,7 +862,7 @@ def render_chips(
     values: list[str],
     css_class: str,
 ) -> None:
-    """Display filters, concepts, or tags as chips."""
+    """Display filters, concepts, or tags."""
 
     if not values:
         return
@@ -640,7 +885,7 @@ def render_chips(
 def get_match_label(
     row: pd.Series,
 ) -> tuple[str, str]:
-    """Convert the hybrid score into a friendly label."""
+    """Convert a hybrid score into a label."""
 
     score_value = pd.to_numeric(
         row.get("hybrid_score"),
@@ -653,9 +898,7 @@ def get_match_label(
             "match-good",
         )
 
-    score = float(
-        score_value
-    )
+    score = float(score_value)
 
     if score >= 0.84:
         return (
@@ -730,7 +973,6 @@ def build_match_reasons(
                 f"It is free and fits your "
                 f"${maximum_price:.2f} budget."
             )
-
         else:
             reasons.append(
                 f"Its ${float(price):.2f} price fits "
@@ -773,7 +1015,7 @@ def build_match_reasons(
         )
 
         reasons.append(
-            f"Its official Steam features support "
+            "Its official Steam features support "
             f"{requested_play_mode} play."
         )
 
@@ -838,7 +1080,7 @@ def build_match_reasons(
             and float(concept_score) >= 0.80
         ):
             reasons.append(
-                f"Its genres and tags strongly match "
+                "Its genres and tags strongly match "
                 f"your interest in {concept_text}."
             )
 
@@ -847,7 +1089,7 @@ def build_match_reasons(
             and float(concept_score) >= 0.40
         ):
             reasons.append(
-                f"Its metadata partially matches "
+                "Its metadata partially matches "
                 f"{concept_text}."
             )
 
@@ -860,11 +1102,12 @@ def build_match_reasons(
     return reasons
 
 
-def display_sidebar() -> tuple[
-    bool,
-    bool,
-]:
-    """Display settings, examples, history, and shortlist."""
+def display_sidebar() -> tuple[bool, bool]:
+    """
+    Display the native Streamlit sidebar.
+
+    No custom CSS controls the drawer behaviour.
+    """
 
     with st.sidebar:
         st.markdown(
@@ -901,7 +1144,6 @@ def display_sidebar() -> tuple[
                 "AI summary is ready.",
                 icon="✨",
             )
-
         else:
             st.info(
                 "Local summary mode is active.",
@@ -914,10 +1156,7 @@ def display_sidebar() -> tuple[
             "### Try an example"
         )
 
-        for (
-            button_label,
-            query,
-        ) in EXAMPLE_SEARCHES:
+        for button_label, query in EXAMPLE_SEARCHES:
             st.button(
                 button_label,
                 key=f"example_{button_label}",
@@ -934,23 +1173,16 @@ def display_sidebar() -> tuple[
         if history:
             st.divider()
 
-            title_column, clear_column = (
-                st.columns(
-                    [3, 1]
-                )
+            st.markdown(
+                "### Recent searches"
             )
 
-            with title_column:
-                st.markdown(
-                    "### Recent searches"
-                )
-
-            with clear_column:
-                st.button(
-                    "Clear",
-                    key="clear_history",
-                    on_click=clear_search_history,
-                )
+            st.button(
+                "Clear search history",
+                key="clear_history",
+                use_container_width=True,
+                on_click=clear_search_history,
+            )
 
             for index, query in enumerate(
                 history
@@ -977,38 +1209,25 @@ def display_sidebar() -> tuple[
         if shortlist:
             st.divider()
 
-            title_column, clear_column = (
-                st.columns(
-                    [3, 1]
-                )
+            st.markdown(
+                "### 💜 Shortlist"
             )
 
-            with title_column:
-                st.markdown(
-                    "### 💜 Shortlist"
-                )
-
-            with clear_column:
-                st.button(
-                    "Clear",
-                    key="clear_shortlist",
-                    on_click=clear_shortlist,
-                )
+            st.button(
+                "Clear shortlist",
+                key="clear_shortlist",
+                use_container_width=True,
+                on_click=clear_shortlist,
+            )
 
             for saved_game in shortlist:
-                game_name = saved_game[
-                    "name"
-                ]
-
-                steam_url = saved_game[
-                    "url"
-                ]
+                game_name = saved_game["name"]
+                steam_url = saved_game["url"]
 
                 if steam_url:
                     st.markdown(
                         f"- [{game_name}]({steam_url})"
                     )
-
                 else:
                     st.markdown(
                         f"- {game_name}"
@@ -1017,19 +1236,18 @@ def display_sidebar() -> tuple[
         st.divider()
 
         st.caption(
-            "Prices and metadata come from the "
-            "local dataset snapshot and may differ "
-            "from Steam."
+            "Prices and metadata come from the local "
+            "dataset snapshot and may differ from Steam."
         )
 
     return (
-        generate_summary,
-        developer_mode,
+        bool(generate_summary),
+        bool(developer_mode),
     )
 
 
 def display_hero() -> None:
-    """Display the main introduction."""
+    """Display the introduction."""
 
     st.markdown(
         """
@@ -1050,11 +1268,8 @@ def display_hero() -> None:
     )
 
 
-def display_search_form() -> tuple[
-    bool,
-    int,
-]:
-    """Display the natural-language search controls."""
+def display_search_form() -> tuple[bool, int]:
+    """Display search controls."""
 
     with st.form(
         "game_search_form"
@@ -1070,35 +1285,22 @@ def display_search_form() -> tuple[
                 "Example: a relaxing single-player "
                 "farming game under $20 for Mac"
             ),
-            height=92,
+            height=112,
             label_visibility="collapsed",
         )
 
-        slider_column, button_column = (
-            st.columns(
-                [2, 1]
-            )
+        top_k = st.slider(
+            "Number of recommendations",
+            min_value=3,
+            max_value=10,
+            value=5,
+            step=1,
         )
 
-        with slider_column:
-            top_k = st.slider(
-                "Number of recommendations",
-                min_value=3,
-                max_value=10,
-                value=5,
-                step=1,
-            )
-
-        with button_column:
-            st.write("")
-            st.write("")
-
-            submitted = (
-                st.form_submit_button(
-                    "✨ Find my games",
-                    use_container_width=True,
-                )
-            )
+        submitted = st.form_submit_button(
+            "✨ Find my games",
+            use_container_width=True,
+        )
 
     st.caption(
         "Tip: Include a genre, mood, platform, "
@@ -1112,7 +1314,7 @@ def display_search_form() -> tuple[
 
 
 def display_empty_home() -> None:
-    """Explain how GameWise works before the first search."""
+    """Display home explanation cards."""
 
     st.markdown(
         '<div class="section-title">'
@@ -1154,24 +1356,19 @@ def display_empty_home() -> None:
         ),
     ]
 
-    for (
-        column,
-        icon,
-        title,
-        description,
-    ) in cards:
+    for column, icon, title, description in cards:
         with column:
             st.markdown(
                 (
                     '<div class="feature-card">'
-                    f'<div class="feature-icon">'
+                    '<div class="feature-icon">'
                     f"{icon}"
                     "</div>"
-                    f'<div class="feature-title">'
-                    f"{title}"
+                    '<div class="feature-title">'
+                    f"{html.escape(title)}"
                     "</div>"
-                    f'<div class="feature-text">'
-                    f"{description}"
+                    '<div class="feature-text">'
+                    f"{html.escape(description)}"
                     "</div>"
                     "</div>"
                 ),
@@ -1185,7 +1382,7 @@ def display_filter_summary(
     candidate_count: int,
     result_count: int,
 ) -> None:
-    """Display how the request was interpreted."""
+    """Display interpreted requirements."""
 
     st.markdown(
         '<div class="section-title">'
@@ -1199,51 +1396,38 @@ def display_filter_summary(
             name,
             value,
         )
-        for (
-            name,
-            value,
-        ) in filters.items()
+        for name, value in filters.items()
     ]
 
-    filter_column, concept_column = (
-        st.columns(2)
+    st.markdown(
+        "**Requirements**"
     )
 
-    with filter_column:
-        st.markdown(
-            "**Requirements**"
+    if filter_values:
+        render_chips(
+            filter_values,
+            "filter-chip",
+        )
+    else:
+        st.caption(
+            "No structured requirements were detected."
         )
 
-        if filter_values:
-            render_chips(
-                filter_values,
-                "filter-chip",
-            )
-
-        else:
-            st.caption(
-                "No structured requirements were detected."
-            )
-
-    with concept_column:
-        st.markdown(
-            "**Game style and concepts**"
-        )
-
-        if requested_concepts:
-            render_chips(
-                requested_concepts,
-                "concept-chip",
-            )
-
-        else:
-            st.caption(
-                "No clear style or genre was detected."
-            )
-
-    candidate_column, result_column = (
-        st.columns(2)
+    st.markdown(
+        "**Game style and concepts**"
     )
+
+    if requested_concepts:
+        render_chips(
+            requested_concepts,
+            "concept-chip",
+        )
+    else:
+        st.caption(
+            "No clear style or genre was detected."
+        )
+
+    candidate_column, result_column = st.columns(2)
 
     with candidate_column:
         st.metric(
@@ -1261,7 +1445,7 @@ def display_filter_summary(
 def display_clarification_message(
     candidate_count: int,
 ) -> None:
-    """Ask the user to make a broad request more specific."""
+    """Ask for a more specific request."""
 
     st.info(
         (
@@ -1320,52 +1504,44 @@ def sort_results(
     search_results: pd.DataFrame,
     sort_option: str,
 ) -> pd.DataFrame:
-    """Sort retrieved games for easier comparison."""
+    """Sort retrieved games."""
 
-    sorted_results = (
-        search_results.copy()
-    )
+    sorted_results = search_results.copy()
 
     if sort_option == "Highest reviews":
-        sorted_results = (
-            sorted_results.sort_values(
-                by=[
-                    "positive_review_percentage",
-                    "total_reviews",
-                ],
-                ascending=[
-                    False,
-                    False,
-                ],
-            )
+        sorted_results = sorted_results.sort_values(
+            by=[
+                "positive_review_percentage",
+                "total_reviews",
+            ],
+            ascending=[
+                False,
+                False,
+            ],
         )
 
     elif sort_option == "Lowest price":
-        sorted_results = (
-            sorted_results.sort_values(
-                by=[
-                    "price_usd",
-                    "hybrid_score",
-                ],
-                ascending=[
-                    True,
-                    False,
-                ],
-            )
+        sorted_results = sorted_results.sort_values(
+            by=[
+                "price_usd",
+                "hybrid_score",
+            ],
+            ascending=[
+                True,
+                False,
+            ],
         )
 
     elif sort_option == "Newest releases":
-        sorted_results = (
-            sorted_results.sort_values(
-                by=[
-                    "release_year",
-                    "hybrid_score",
-                ],
-                ascending=[
-                    False,
-                    False,
-                ],
-            )
+        sorted_results = sorted_results.sort_values(
+            by=[
+                "release_year",
+                "hybrid_score",
+            ],
+            ascending=[
+                False,
+                False,
+            ],
         )
 
     return sorted_results.reset_index(
@@ -1375,28 +1551,18 @@ def sort_results(
 
 def display_result_toolbar(
     search_results: pd.DataFrame,
-) -> tuple[
-    pd.DataFrame,
-    str,
-]:
-    """Display sorting and CSV download controls."""
+) -> tuple[pd.DataFrame, str]:
+    """Display sorting and download controls."""
 
-    sort_column, download_column = (
-        st.columns(
-            [2, 1]
-        )
+    sort_option = st.selectbox(
+        "Sort recommendations",
+        options=[
+            "Best match",
+            "Highest reviews",
+            "Lowest price",
+            "Newest releases",
+        ],
     )
-
-    with sort_column:
-        sort_option = st.selectbox(
-            "Sort recommendations",
-            options=[
-                "Best match",
-                "Highest reviews",
-                "Lowest price",
-                "Newest releases",
-            ],
-        )
 
     sorted_results = sort_results(
         search_results,
@@ -1417,8 +1583,7 @@ def display_result_toolbar(
             "platforms",
             "steam_store_url",
         ]
-        if column_name
-        in sorted_results.columns
+        if column_name in sorted_results.columns
     ]
 
     csv_data = (
@@ -1431,19 +1596,13 @@ def display_result_toolbar(
         .encode("utf-8-sig")
     )
 
-    with download_column:
-        st.write("")
-        st.write("")
-
-        st.download_button(
-            "⬇ Download results",
-            data=csv_data,
-            file_name=(
-                "gamewise_recommendations.csv"
-            ),
-            mime="text/csv",
-            use_container_width=True,
-        )
+    st.download_button(
+        "⬇ Download results",
+        data=csv_data,
+        file_name="gamewise_recommendations.csv",
+        mime="text/csv",
+        use_container_width=True,
+    )
 
     return (
         sorted_results,
@@ -1451,32 +1610,19 @@ def display_result_toolbar(
     )
 
 
-def generation_label(
-    mode: str,
-) -> str:
-    """Return a readable summary-mode label."""
+def generation_label(mode: str) -> str:
+    """Return a readable summary label."""
 
     if mode == "openai":
-        return (
-            "✨ AI-generated grounded summary"
-        )
+        return "✨ AI-generated grounded summary"
 
     if mode == "local_fallback":
-        return (
-            "🧩 Local grounded summary"
-        )
+        return "🧩 Local grounded summary"
 
-    if (
-        mode
-        == "local_fallback_after_error"
-    ):
-        return (
-            "🧩 Local fallback after model error"
-        )
+    if mode == "local_fallback_after_error":
+        return "🧩 Local fallback after model error"
 
-    return (
-        "Grounded recommendation summary"
-    )
+    return "Grounded recommendation summary"
 
 
 def display_generated_summary(
@@ -1485,20 +1631,16 @@ def display_generated_summary(
     filters: dict[str, object],
     requested_concepts: list[str],
 ) -> None:
-    """Generate and display a grounded recommendation summary."""
+    """Generate and display a grounded summary."""
 
     with st.spinner(
         "Writing a grounded recommendation..."
     ):
-        answer, mode = (
-            run_cached_generation(
-                query=query,
-                search_results=search_results,
-                filters=filters,
-                requested_concepts=(
-                    requested_concepts
-                ),
-            )
+        answer, mode = run_cached_generation(
+            query=query,
+            search_results=search_results,
+            filters=filters,
+            requested_concepts=requested_concepts,
         )
 
     st.markdown(
@@ -1532,7 +1674,7 @@ def display_game_card(
     requested_concepts: list[str],
     developer_mode: bool,
 ) -> None:
-    """Display one polished recommendation card."""
+    """Display one recommendation card."""
 
     game_name = safe_text(
         row.get("name"),
@@ -1548,45 +1690,31 @@ def display_game_card(
         row.get("short_description")
     )
 
-    match_label, match_class = (
-        get_match_label(
-            row
-        )
+    match_label, match_class = get_match_label(
+        row
     )
 
     with st.container(
         border=True
     ):
-        title_column, match_column = (
-            st.columns(
-                [4, 1]
-            )
+        st.caption(
+            "🏆 Best overall match"
+            if result_number == 1
+            else f"Recommendation {result_number}"
         )
 
-        with title_column:
-            st.caption(
-                "🏆 Best overall match"
-                if result_number == 1
-                else (
-                    f"Recommendation "
-                    f"{result_number}"
-                )
-            )
+        st.markdown(
+            f"### {game_name}"
+        )
 
-            st.markdown(
-                f"### {game_name}"
-            )
-
-        with match_column:
-            st.markdown(
-                (
-                    f'<span class="match-pill '
-                    f'{match_class}">'
-                    f"{html.escape(match_label)}"
-                    "</span>"
-                ),
-                unsafe_allow_html=True,
-            )
+        st.markdown(
+            (
+                f'<span class="match-pill {match_class}">'
+                f"{html.escape(match_label)}"
+                "</span>"
+            ),
+            unsafe_allow_html=True,
+        )
 
         st.write(
             description
@@ -1599,26 +1727,20 @@ def display_game_card(
         with price_column:
             st.metric(
                 "Price",
-                format_price(
-                    row
-                ),
+                format_price(row),
             )
 
         with review_column:
             st.metric(
                 "Positive reviews",
-                format_review_percentage(
-                    row
-                ),
+                format_review_percentage(row),
             )
 
         with year_column:
             st.metric(
                 "Release year",
                 format_release_year(
-                    row.get(
-                        "release_year"
-                    )
+                    row.get("release_year")
                 ),
             )
 
@@ -1658,36 +1780,28 @@ def display_game_card(
             )
 
         st.caption(
-            format_review_summary(
-                row
-            )
+            format_review_summary(row)
         )
 
-        steam_column, save_column = (
-            st.columns(2)
-        )
-
-        with steam_column:
-            if steam_url:
-                st.link_button(
-                    "Open on Steam ↗",
-                    steam_url,
-                    use_container_width=True,
-                )
-
-        with save_column:
-            if st.button(
-                "♡ Save to shortlist",
-                key=(
-                    f"save_{result_number}_"
-                    f"{game_name}"
-                ),
+        if steam_url:
+            st.link_button(
+                "Open on Steam ↗",
+                steam_url,
                 use_container_width=True,
-            ):
-                add_to_shortlist(
-                    game_name,
-                    steam_url,
-                )
+            )
+
+        if st.button(
+            "♡ Save to shortlist",
+            key=(
+                f"save_{result_number}_"
+                f"{game_name}"
+            ),
+            use_container_width=True,
+        ):
+            add_to_shortlist(
+                game_name,
+                steam_url,
+            )
 
         if developer_mode:
             with st.expander(
@@ -1716,31 +1830,22 @@ def display_game_card(
                         )
                     )
 
-                for (
-                    label,
-                    column_name,
-                ) in fields:
+                for label, column_name in fields:
                     value = pd.to_numeric(
-                        row.get(
-                            column_name
-                        ),
+                        row.get(column_name),
                         errors="coerce",
                     )
 
-                    if not pd.isna(
-                        value
-                    ):
+                    if not pd.isna(value):
                         st.write(
-                            f"{label}:",
-                            f"{float(value):.4f}",
+                            f"{label}: "
+                            f"{float(value):.4f}"
                         )
 
                 st.write(
                     "Official categories:",
                     safe_text(
-                        row.get(
-                            "categories"
-                        )
+                        row.get("categories")
                     ),
                 )
 
@@ -1769,15 +1874,11 @@ def main() -> None:
     apply_page_style()
     display_pending_toast()
 
-    generate_summary, developer_mode = (
-        display_sidebar()
-    )
+    generate_summary, developer_mode = display_sidebar()
 
     display_hero()
 
-    form_submitted, top_k = (
-        display_search_form()
-    )
+    form_submitted, top_k = display_search_form()
 
     auto_submit = bool(
         st.session_state.pop(
@@ -1786,10 +1887,7 @@ def main() -> None:
         )
     )
 
-    if (
-        form_submitted
-        or auto_submit
-    ):
+    if form_submitted or auto_submit:
         query = (
             st.session_state[
                 "query_input"
@@ -1817,11 +1915,9 @@ def main() -> None:
                     "searching the Steam collection..."
                 )
             ):
-                payload = (
-                    run_cached_search(
-                        query=query,
-                        top_k=top_k,
-                    )
+                payload = run_cached_search(
+                    query=query,
+                    top_k=top_k,
                 )
 
             st.session_state[
@@ -1835,12 +1931,10 @@ def main() -> None:
             add_to_search_history(
                 query
             )
+
             st.rerun()
 
-    if (
-        "search_payload"
-        not in st.session_state
-    ):
+    if "search_payload" not in st.session_state:
         display_empty_home()
         display_footer()
         return
@@ -1855,52 +1949,39 @@ def main() -> None:
         "search_payload"
     ]
 
-    submitted_query = (
-        st.session_state.get(
-            "submitted_query",
-            "",
-        )
+    submitted_query = st.session_state.get(
+        "submitted_query",
+        "",
     )
 
     st.divider()
 
-    title_column, clear_column = (
-        st.columns(
-            [5, 1]
-        )
+    st.markdown(
+        "## Your recommendations"
     )
 
-    with title_column:
-        st.markdown(
-            "## Your recommendations"
-        )
+    st.caption(
+        f'Based on: "{submitted_query}"'
+    )
 
-        st.caption(
-            f'Based on: "{submitted_query}"'
-        )
-
-    with clear_column:
-        st.button(
-            "Clear search",
-            key="clear_current_search",
-            use_container_width=True,
-            on_click=clear_current_search,
-        )
+    st.button(
+        "Clear search",
+        key="clear_current_search",
+        use_container_width=True,
+        on_click=clear_current_search,
+    )
 
     display_filter_summary(
         filters=extracted_filters,
         requested_concepts=requested_concepts,
         candidate_count=candidate_count,
-        result_count=len(
-            search_results
-        ),
+        result_count=len(search_results),
     )
 
     if clarification_required:
         display_clarification_message(
             candidate_count
         )
-
         display_footer()
         return
 
@@ -1932,14 +2013,11 @@ def main() -> None:
 
     if sort_option != "Best match":
         st.caption(
-            f"Results are sorted by "
+            "Results are sorted by "
             f"{sort_option.lower()}."
         )
 
-    for (
-        result_number,
-        (_, row),
-    ) in enumerate(
+    for result_number, (_, row) in enumerate(
         displayed_results.iterrows(),
         start=1,
     ):
