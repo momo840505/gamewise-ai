@@ -68,6 +68,14 @@ CONCEPT_GROUPS: dict[str, dict[str, float]] = {
         "dark": 0.35,
         "atmospheric": 0.30,
     },
+    "horror": {
+        "horror": 1.00,
+        "survival horror": 0.95,
+        "psychological horror": 0.90,
+        "dark": 0.45,
+        "atmospheric": 0.35,
+        "gore": 0.30,
+    },
     "survival": {
         "survival": 1.00,
         "open world survival craft": 1.00,
@@ -169,6 +177,11 @@ CONCEPT_TRIGGER_TERMS: dict[str, list[str]] = {
         "psychological horror",
         "psychological-horror",
     ],
+    "horror": [
+        "horror",
+        "scary",
+        "creepy",
+    ],
     "survival": [
         "survival",
         "survival game",
@@ -246,43 +259,247 @@ CONCEPT_TRIGGER_TERMS: dict[str, list[str]] = {
 
 
 TRADITIONAL_CHINESE_QUERY_SYNONYMS: dict[str, str] = {
-    "免費": " free ",
     "免費遊戲": " free game ",
+    "免費": " free ",
+    "免费游戏": " free game ",
+    "免费": " free ",
+    "不用錢": " free ",
+    "不用钱": " free ",
+    "零元": " free ",
+    "預算": " budget ",
+    "预算": " budget ",
+    "價錢": " price ",
+    "价钱": " price ",
+    "價格": " price ",
+    "价格": " price ",
+    "售價": " price ",
+    "售价": " price ",
+    "花費": " price ",
+    "花费": " price ",
     "以下": " under ",
+    "以內": " under ",
+    "以内": " under ",
+    "之內": " under ",
+    "之内": " under ",
     "低於": " under ",
+    "低于": " under ",
     "不超過": " under ",
+    "不超过": " under ",
+    "不能超過": " under ",
+    "不能超过": " under ",
+    "小於": " under ",
+    "小于": " under ",
+    "少於": " under ",
+    "少于": " under ",
+    "不到": " under ",
+    "便宜": " cheap ",
     "美元": " ",
     "美金": " ",
+    "鎂": " ",
+    "元以下": " under ",
+    "元以內": " under ",
+    "元以内": " under ",
+    "塊以下": " under ",
+    "块以下": " under ",
     "好評": " positive reviews ",
+    "好评": " positive reviews ",
     "正面評價": " positive reviews ",
+    "正面评价": " positive reviews ",
+    "正評": " positive reviews ",
+    "正评": " positive reviews ",
+    "正面": " positive reviews ",
+    "評價": " rating ",
+    "评价": " rating ",
+    "評分": " rating ",
+    "評價率": " rating ",
+    "评价率": " rating ",
+    "推薦率": " positive reviews ",
+    "推荐率": " positive reviews ",
+    "玩家評價": " positive reviews ",
+    "玩家评价": " positive reviews ",
     "至少": " at least ",
+    "起碼": " at least ",
+    "起码": " at least ",
+    "至少要": " at least ",
+    "以上": " at least ",
+    "高於": " over ",
+    "高于": " over ",
+    "超過": " over ",
+    "超过": " over ",
+    "不低於": " at least ",
+    "不低于": " at least ",
     "支援": " for ",
-    "合作": " co-op ",
+    "支持": " for ",
+    "適合": " for ",
+    "适合": " for ",
+    "可玩": " for ",
+    "可以玩": " for ",
     "多人合作": " co-op ",
+    "多人协作": " co-op ",
+    "連線合作": " online co-op ",
+    "联机合作": " online co-op ",
+    "線上合作": " online co-op ",
+    "线上合作": " online co-op ",
+    "本地合作": " local co-op ",
+    "可以合作": " co-op ",
+    "可合作": " co-op ",
+    "合作遊玩": " co-op ",
+    "合作游玩": " co-op ",
+    "協作": " co-op ",
+    "协作": " co-op ",
+    "合作": " co-op ",
+    "協力": " co-op ",
+    "协力": " co-op ",
+    "一起玩": " co-op ",
+    "一起打": " co-op ",
+    "朋友一起": " co-op ",
+    "跟朋友": " co-op ",
+    "和朋友": " co-op ",
+    "與朋友": " co-op ",
+    "与朋友": " co-op ",
+    "雙人": " co-op ",
+    "双人": " co-op ",
+    "兩人": " co-op ",
+    "两人": " co-op ",
     "單人": " single-player ",
+    "单人": " single-player ",
+    "單機": " single-player ",
+    "单机": " single-player ",
+    "一個人": " single-player ",
+    "一个人": " single-player ",
+    "自己玩": " single-player ",
     "獨自": " single-player ",
+    "独自": " single-player ",
+    "多人連線": " multiplayer ",
+    "多人联机": " multiplayer ",
+    "多人連機": " multiplayer ",
+    "連機": " multiplayer ",
+    "联机": " multiplayer ",
+    "線上多人": " multiplayer ",
+    "线上多人": " multiplayer ",
+    "網路多人": " multiplayer ",
+    "网络多人": " multiplayer ",
+    "多人遊戲": " multiplayer ",
+    "多人游戏": " multiplayer ",
     "多人": " multiplayer ",
+    "生存遊戲": " survival game ",
+    "生存游戏": " survival game ",
     "生存": " survival ",
+    "求生": " survival ",
+    "活下去": " survival ",
+    "末日": " survival ",
+    "喪屍": " survival ",
+    "丧尸": " survival ",
+    "殭屍": " survival ",
+    "僵尸": " survival ",
     "心理恐怖": " psychological horror ",
+    "精神恐怖": " psychological horror ",
     "恐怖": " horror ",
+    "驚悚": " horror ",
+    "惊悚": " horror ",
+    "嚇人": " scary horror ",
+    "吓人": " scary horror ",
+    "詭異": " creepy horror ",
+    "诡异": " creepy horror ",
     "放鬆": " relaxing ",
+    "放松": " relaxing ",
+    "輕鬆": " relaxing ",
+    "轻松": " relaxing ",
     "療癒": " cozy ",
+    "疗愈": " cozy ",
+    "治癒": " cozy ",
+    "治愈": " cozy ",
+    "溫馨": " cozy ",
+    "温馨": " cozy ",
     "休閒": " casual ",
+    "休闲": " casual ",
+    "簡單": " casual ",
+    "简单": " casual ",
+    "輕度": " casual ",
+    "轻度": " casual ",
     "回合制": " turn-based ",
+    "回合": " turn-based ",
+    "回合策略": " turn-based strategy ",
     "戰術": " tactical ",
+    "战术": " tactical ",
+    "戰棋": " tactical ",
+    "战棋": " tactical ",
     "策略": " strategy ",
+    "戰略": " strategy ",
+    "战略": " strategy ",
+    "即時戰略": " real time strategy ",
+    "即时战略": " real time strategy ",
+    "4X": " 4x ",
     "冒險": " adventure ",
+    "冒险": " adventure ",
+    "探索": " exploration ",
     "解謎": " puzzle ",
+    "解谜": " puzzle ",
+    "謎題": " puzzle ",
+    "谜题": " puzzle ",
+    "推理": " puzzle ",
     "農場": " farming ",
+    "农场": " farming ",
+    "種田": " farming ",
+    "种田": " farming ",
+    "耕種": " farming ",
+    "耕种": " farming ",
+    "牧場": " farming ",
+    "牧场": " farming ",
     "模擬": " simulation ",
+    "模拟": " simulation ",
+    "經營": " simulation ",
+    "经营": " simulation ",
+    "管理": " management ",
+    "養成": " simulation ",
+    "养成": " simulation ",
     "劇情": " story rich ",
+    "剧情": " story rich ",
+    "故事": " story rich ",
+    "敘事": " story rich ",
+    "叙事": " story rich ",
+    "選擇": " choices matter ",
+    "选择": " choices matter ",
+    "多結局": " multiple endings ",
+    "多结局": " multiple endings ",
     "角色扮演": " rpg ",
+    "日式RPG": " jrpg ",
+    "日式rpg": " jrpg ",
+    "動作RPG": " action rpg ",
+    "動作rpg": " action rpg ",
+    "动作RPG": " action rpg ",
+    "动作rpg": " action rpg ",
     "賽車": " racing ",
+    "赛车": " racing ",
+    "競速": " racing ",
+    "竞速": " racing ",
+    "開車": " driving ",
+    "开车": " driving ",
     "射擊": " shooter ",
+    "射击": " shooter ",
+    "槍戰": " shooter ",
+    "枪战": " shooter ",
+    "第一人稱射擊": " first person shooter ",
+    "第一人称射击": " first person shooter ",
+    "第三人稱射擊": " third person shooter ",
+    "第三人称射击": " third person shooter ",
+    "開放世界": " open world ",
+    "开放世界": " open world ",
+    "開放式世界": " open world ",
+    "开放式世界": " open world ",
+    "沙盒": " sandbox ",
     "年之後": " after ",
+    "年之后": " after ",
+    "年後": " after ",
+    "年后": " after ",
     "年以前": " before ",
+    "年之前": " before ",
     "之後": " after ",
+    "之后": " after ",
+    "以後": " after ",
+    "以后": " after ",
     "以前": " before ",
+    "之前": " before ",
 }
 
 
@@ -618,9 +835,20 @@ def extract_filters(
                 r"\s*(?:usd|dollars?)?\s*under"
             ),
             (
+                r"(?:budget|price|預算|预算|價格|价格|"
+                r"價錢|价钱|售價|售价|花費|花费|"
+                r"低於|低于|不到|不超過|不超过|"
+                r"不能超過|不能超过|小於|小于|少於|少于)"
+                r"\s*(?:usd\s*)?\$?\s*"
                 r"(\d+(?:\.\d+)?)"
-                r"\s*(?:美元|美金)?\s*"
-                r"(?:以下|以內|內|不超過)"
+                r"\s*(?:美元|美金|鎂|元|塊|块|usd|dollars?)?"
+            ),
+            (
+                r"(\d+(?:\.\d+)?)"
+                r"\s*(?:美元|美金|鎂|元|塊|块|usd|dollars?)?\s*"
+                r"(?:以下|以內|以内|之內|之内|內|内|"
+                r"不超過|不超过|不能超過|不能超过|"
+                r"以?下|以?內|以?内)"
             ),
         ],
     )
@@ -652,7 +880,32 @@ def extract_filters(
                 ),
                 (
                     r"(\d+(?:\.\d+)?)\s*%"
-                    r"\s*(?:好評|正面評價)"
+                    r"\s*(?:以上|起)?\s*"
+                    r"(?:好評|好评|正面評價|正面评价|"
+                    r"正評|正评)"
+                ),
+                (
+                    r"(\d+(?:\.\d+)?)"
+                    r"\s*(?:以上|起)\s*"
+                    r"(?:好評|好评|正面評價|正面评价|"
+                    r"正評|正评|推薦率|推荐率|玩家評價|玩家评价)"
+                ),
+                (
+                    r"(?:至少|起碼|起码|不低於|不低于|"
+                    r"高於|高于|超過|超过|"
+                    r"好評率|好评率|正評率|正评率|"
+                    r"評價|评价|評分|評價率|评价率|"
+                    r"推薦率|推荐率|玩家評價|玩家评价)"
+                    r"\s*(\d+(?:\.\d+)?)\s*%?"
+                    r"\s*(?:以上|起)?"
+                ),
+                (
+                    r"(?:好評|好评|正面評價|正面评价|"
+                    r"正評|正评|推薦率|推荐率|玩家評價|玩家评价)"
+                    r"\s*(?:至少|起碼|起码|不低於|不低于|"
+                    r"高於|高于|超過|超过)?"
+                    r"\s*(\d+(?:\.\d+)?)\s*%?"
+                    r"\s*(?:以上|起)?"
                 ),
             ],
         )
@@ -680,6 +933,10 @@ def extract_filters(
             (
                 r"(19\d{2}|20\d{2})"
                 r"\s*年?\s*(?:之後|以後)"
+            ),
+            (
+                r"(19\d{2}|20\d{2})"
+                r"\s*年?\s*(?:之后|以后|後|后|起|以來|以来)"
             ),
         ],
     )
@@ -728,6 +985,10 @@ def extract_filters(
                 r"(19\d{2}|20\d{2})"
                 r"\s*年?\s*(?:以前|之前)"
             ),
+            (
+                r"(19\d{2}|20\d{2})"
+                r"\s*年?\s*(?:前|以前|之前)"
+            ),
         ],
     )
 
@@ -741,19 +1002,34 @@ def extract_filters(
     if re.search(
         r"\bfree(?:[- ]to[- ]play)?\b",
         normalized_query,
+    ) or re.search(
+        r"(?:免費|免费|不用錢|不用钱|零元)",
+        query,
     ):
         filters["is_free"] = True
 
     if "linux" in normalized_query:
         filters["platform"] = "Linux"
 
-    elif re.search(
-        r"\bmac(?:os)?\b",
-        normalized_query,
+    elif (
+        "mac" in normalized_query
+        or "macos" in normalized_query
+        or "macbook" in normalized_query
+    ) or re.search(
+        r"(?:蘋果電腦|苹果电脑|蘋果|苹果|麥金塔)",
+        query,
+        flags=re.IGNORECASE,
     ):
         filters["platform"] = "Mac"
 
-    elif "windows" in normalized_query:
+    elif (
+        "windows" in normalized_query
+        or re.search(
+            r"(?:win(?:dows)?|視窗|视窗)",
+            query,
+            flags=re.IGNORECASE,
+        )
+    ):
         filters["platform"] = "Windows"
 
     if any(
@@ -764,7 +1040,12 @@ def extract_filters(
             "one player",
             "solo game",
             "play alone",
+            "single player",
         ]
+    ) or re.search(
+        r"(?:單人|单人|單機|单机|一個人|一个人|"
+        r"自己玩|獨自|独自)",
+        query,
     ):
         filters[
             "play_mode"
@@ -778,7 +1059,16 @@ def extract_filters(
             "cooperative",
             "co-op",
             "coop",
+            "local co-op",
         ]
+    ) or re.search(
+        r"(?:多人合作|多人协作|連線合作|联机合作|"
+        r"連機合作|線上合作|线上合作|本地合作|"
+        r"可以合作|可合作|合作遊玩|合作游玩|"
+        r"合作|協作|协作|協力|协力|一起玩|"
+        r"一起打|朋友一起|跟朋友|和朋友|與朋友|与朋友|"
+        r"雙人|双人|兩人|两人)",
+        query,
     ):
         filters[
             "play_mode"
@@ -790,6 +1080,11 @@ def extract_filters(
             "multiplayer",
             "multi-player",
         ]
+    ) or re.search(
+        r"(?:多人連線|多人联机|線上多人|线上多人|"
+        r"多人連機|連機|联机|網路多人|网络多人|"
+        r"多人遊戲|多人游戏|多人)",
+        query,
     ):
         filters[
             "play_mode"

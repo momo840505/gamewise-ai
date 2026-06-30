@@ -182,6 +182,47 @@ def test_extract_filters_supports_traditional_chinese_query() -> None:
     assert filters["play_mode"] == "co-op"
 
 
+def test_extract_filters_supports_compact_chinese_query() -> None:
+    """Chinese constraints should work without spaces around the terms."""
+
+    filters = extract_filters(
+        "超級恐怖的且免費且至少80%正面評價"
+    )
+
+    assert filters["is_free"] is True
+    assert filters["minimum_review_percentage"] == 80.0
+
+
+def test_extract_filters_supports_more_chinese_phrases() -> None:
+    """Common Chinese alternatives should map to the same hard filters."""
+
+    filters = extract_filters(
+        (
+            "預算20以內，正評率80以上，"
+            "支援Mac，跟朋友連線合作，2021年後"
+        )
+    )
+
+    assert filters["maximum_price"] == 20.0
+    assert filters["minimum_review_percentage"] == 80.0
+    assert filters["platform"] == "Mac"
+    assert filters["release_year_after"] == 2021
+    assert filters["play_mode"] == "co-op"
+
+
+def test_extract_filters_supports_colloquial_chinese_phrases() -> None:
+    """Colloquial Chinese search phrases should map to structured filters."""
+
+    filters = extract_filters(
+        "20塊以下，好評80以上，MacBook，朋友一起玩"
+    )
+
+    assert filters["maximum_price"] == 20.0
+    assert filters["minimum_review_percentage"] == 80.0
+    assert filters["platform"] == "Mac"
+    assert filters["play_mode"] == "co-op"
+
+
 def test_detect_requested_concepts_supports_traditional_chinese() -> None:
     """Traditional Chinese concept terms should trigger the ranking signals."""
 
@@ -192,6 +233,30 @@ def test_detect_requested_concepts_supports_traditional_chinese() -> None:
     assert "relaxing" in concepts
     assert "farming" in concepts
     assert "simulation" in concepts
+
+
+def test_detect_requested_concepts_supports_chinese_horror() -> None:
+    """General Chinese horror terms should trigger concept ranking."""
+
+    concepts = detect_requested_concepts(
+        "超級恐怖的生存遊戲"
+    )
+
+    assert "horror" in concepts
+    assert "survival" in concepts
+
+
+def test_detect_requested_concepts_supports_expanded_chinese_terms() -> None:
+    """Expanded Chinese genre terms should trigger existing concepts."""
+
+    concepts = detect_requested_concepts(
+        "想玩喪屍開放世界求生，也可以是日式RPG劇情多結局"
+    )
+
+    assert "survival" in concepts
+    assert "open world" in concepts
+    assert "rpg" in concepts
+    assert "story rich" in concepts
 
 
 def test_free_filter_detects_single_free_word() -> None:
