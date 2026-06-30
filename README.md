@@ -29,6 +29,17 @@ GameWise understands your budget, platform, review requirements, release year, p
 
 ---
 
+## Portfolio Engineering Notes
+
+This repository now includes additional engineering documentation:
+
+- [Retrieval evaluation](docs/retrieval_evaluation.md)
+- [Traditional Chinese extension plan](docs/traditional_chinese_extension.md)
+
+These notes explain how the recommendation system is evaluated, how strict user constraints are preserved, and how the project can be extended toward Taiwan-market multilingual AI use cases.
+
+---
+
 ## 🌐 Live Demo
 
 Try GameWise AI directly in your browser:
