@@ -32,6 +32,14 @@ EXAMPLE_SEARCHES = [
         ),
     ),
     (
+        "🧟 中文恐怖生存",
+        "20 美元以下、80% 好評、支援 Mac、合作、生存遊戲",
+    ),
+    (
+        "👻 免費恐怖中文",
+        "超級恐怖的且免費且至少80%正面評價",
+    ),
+    (
         "👻 Free psychological horror",
         "a free psychological horror game",
     ),
@@ -1283,7 +1291,9 @@ def display_search_form() -> tuple[bool, int]:
             key="query_input",
             placeholder=(
                 "Example: a relaxing single-player "
-                "farming game under $20 for Mac"
+                "farming game under $20 for Mac；"
+                "或：20 美元以下、80% 好評、"
+                "支援 Mac、合作、生存遊戲"
             ),
             height=112,
             label_visibility="collapsed",
@@ -1304,7 +1314,9 @@ def display_search_form() -> tuple[bool, int]:
 
     st.caption(
         "Tip: Include a genre, mood, platform, "
-        "budget, play mode, or review requirement."
+        "budget, play mode, or review requirement. "
+        "中文也可以，例如：免費、好評、"
+        "支援 Mac、合作、生存、恐怖。"
     )
 
     return (
