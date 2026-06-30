@@ -117,5 +117,35 @@
     "top_k": 5,
     "expected_behavior": "no_results",
     "relevance_terms": []
+  },
+  {
+    "case_id": "zh_coop_survival",
+    "query": "我想找一款 20 美元以下、至少 80% 好評、可以合作的生存遊戲",
+    "top_k": 5,
+    "expected_behavior": "results",
+    "relevance_terms": [
+      "survival",
+      "open world survival craft",
+      "survival horror"
+    ]
+  },
+  {
+    "case_id": "zh_mac_farming_sim",
+    "query": "找一款支援 Mac 的農場模擬遊戲",
+    "top_k": 5,
+    "expected_behavior": "results",
+    "relevance_terms": [
+      "farming",
+      "farming sim",
+      "agriculture",
+      "life sim"
+    ]
+  },
+  {
+    "case_id": "zh_broad_price_only",
+    "query": "推薦 20 美元以下的遊戲",
+    "top_k": 5,
+    "expected_behavior": "clarification",
+    "relevance_terms": []
   }
 ]
