@@ -421,25 +421,29 @@ def print_summary(
         f"{quality_report['output_rows']:,}"
     )
 
+    duplicate_application_ids_removed = quality_report[
+        "duplicated_application_ids_removed"
+    ]
+    unknown_release_dates = quality_report[
+        "unknown_release_dates"
+    ]
+    games_without_reviews = quality_report[
+        "games_without_reviews"
+    ]
+
     print(
         "Duplicate application IDs removed: "
-        f"{quality_report[
-            'duplicated_application_ids_removed'
-        ]:,}"
+        f"{duplicate_application_ids_removed:,}"
     )
 
     print(
         "Unknown release dates: "
-        f"{quality_report[
-            'unknown_release_dates'
-        ]:,}"
+        f"{unknown_release_dates:,}"
     )
 
     print(
         "Games without reviews: "
-        f"{quality_report[
-            'games_without_reviews'
-        ]:,}"
+        f"{games_without_reviews:,}"
     )
 
     print(

@@ -6,6 +6,7 @@ from scripts.hybrid_search import (
     calculate_concept_scores,
     calculate_hybrid_scores,
     calculate_play_mode_preference_scores,
+    detect_requested_concepts,
     extract_filters,
     filter_invalid_game_names,
     print_results,
@@ -161,6 +162,36 @@ def test_extract_filters_detects_all_constraints() -> None:
     assert filters["platform"] == "Linux"
     assert filters["release_year_after"] == 2020
     assert filters["play_mode"] == "co-op"
+
+
+def test_extract_filters_supports_traditional_chinese_query() -> None:
+    """Traditional Chinese portfolio queries should map to structured filters."""
+
+    filters = extract_filters(
+        (
+            "我想找一款 20 美元以下、"
+            "至少 80% 好評、支援 Mac、"
+            "可以合作、2020 年之後推出的生存遊戲"
+        )
+    )
+
+    assert filters["maximum_price"] == 20.0
+    assert filters["minimum_review_percentage"] == 80.0
+    assert filters["platform"] == "Mac"
+    assert filters["release_year_after"] == 2020
+    assert filters["play_mode"] == "co-op"
+
+
+def test_detect_requested_concepts_supports_traditional_chinese() -> None:
+    """Traditional Chinese concept terms should trigger the ranking signals."""
+
+    concepts = detect_requested_concepts(
+        "推薦一款放鬆、單人、農場模擬遊戲"
+    )
+
+    assert "relaxing" in concepts
+    assert "farming" in concepts
+    assert "simulation" in concepts
 
 
 def test_free_filter_detects_single_free_word() -> None:

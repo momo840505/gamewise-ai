@@ -124,11 +124,13 @@ def print_results(
             f"Price: ${row['price_usd']:.2f}"
         )
 
+        positive_review_percentage = row[
+            "positive_review_percentage"
+        ]
+
         print(
             f"Positive reviews: "
-            f"{row[
-                'positive_review_percentage'
-            ]:.2f}%"
+            f"{positive_review_percentage:.2f}%"
         )
 
         print(f"Genres: {row['genres']}")

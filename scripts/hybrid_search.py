@@ -245,6 +245,62 @@ CONCEPT_TRIGGER_TERMS: dict[str, list[str]] = {
 }
 
 
+TRADITIONAL_CHINESE_QUERY_SYNONYMS: dict[str, str] = {
+    "免費": " free ",
+    "免費遊戲": " free game ",
+    "以下": " under ",
+    "低於": " under ",
+    "不超過": " under ",
+    "美元": " ",
+    "美金": " ",
+    "好評": " positive reviews ",
+    "正面評價": " positive reviews ",
+    "至少": " at least ",
+    "支援": " for ",
+    "合作": " co-op ",
+    "多人合作": " co-op ",
+    "單人": " single-player ",
+    "獨自": " single-player ",
+    "多人": " multiplayer ",
+    "生存": " survival ",
+    "心理恐怖": " psychological horror ",
+    "恐怖": " horror ",
+    "放鬆": " relaxing ",
+    "療癒": " cozy ",
+    "休閒": " casual ",
+    "回合制": " turn-based ",
+    "戰術": " tactical ",
+    "策略": " strategy ",
+    "冒險": " adventure ",
+    "解謎": " puzzle ",
+    "農場": " farming ",
+    "模擬": " simulation ",
+    "劇情": " story rich ",
+    "角色扮演": " rpg ",
+    "賽車": " racing ",
+    "射擊": " shooter ",
+    "年之後": " after ",
+    "年以前": " before ",
+    "之後": " after ",
+    "以前": " before ",
+}
+
+
+def expand_traditional_chinese_query(query: str) -> str:
+    """Append English equivalents for common Traditional Chinese game queries."""
+
+    expanded_terms = [
+        replacement
+        for term, replacement in TRADITIONAL_CHINESE_QUERY_SYNONYMS.items()
+        if term in query
+    ]
+
+    if not expanded_terms:
+        return query
+
+    return query + " " + " ".join(expanded_terms)
+
+
 def normalize_text(value: Any) -> str:
     """Normalize text for phrase matching."""
 
@@ -533,6 +589,10 @@ def extract_filters(
 ) -> dict[str, object]:
     """Extract hard constraints from a query."""
 
+    query = expand_traditional_chinese_query(
+        query
+    )
+
     normalized_query = (
         query.casefold()
     )
@@ -552,6 +612,15 @@ def extract_filters(
                 r"(?:usd\s*)?\$?\s*"
                 r"(\d+(?:\.\d+)?)"
                 r"\s*(?:or less|or under|maximum|max)"
+            ),
+            (
+                r"(\d+(?:\.\d+)?)"
+                r"\s*(?:usd|dollars?)?\s*under"
+            ),
+            (
+                r"(\d+(?:\.\d+)?)"
+                r"\s*(?:美元|美金)?\s*"
+                r"(?:以下|以內|內|不超過)"
             ),
         ],
     )
@@ -577,6 +646,14 @@ def extract_filters(
                     r"at least|minimum)?"
                     r"\s*(\d+(?:\.\d+)?)\s*%"
                 ),
+                (
+                    r"(\d+(?:\.\d+)?)\s*%"
+                    r"\s*(?:positive reviews?|positive rating)"
+                ),
+                (
+                    r"(\d+(?:\.\d+)?)\s*%"
+                    r"\s*(?:好評|正面評價)"
+                ),
             ],
         )
     )
@@ -595,6 +672,14 @@ def extract_filters(
             (
                 r"(?:released\s+)?after\s+"
                 r"(19\d{2}|20\d{2})"
+            ),
+            (
+                r"(19\d{2}|20\d{2})"
+                r"\s*(?:after|or later)"
+            ),
+            (
+                r"(19\d{2}|20\d{2})"
+                r"\s*年?\s*(?:之後|以後)"
             ),
         ],
     )
@@ -634,6 +719,14 @@ def extract_filters(
             (
                 r"(?:released\s+)?before\s+"
                 r"(19\d{2}|20\d{2})"
+            ),
+            (
+                r"(19\d{2}|20\d{2})"
+                r"\s*before"
+            ),
+            (
+                r"(19\d{2}|20\d{2})"
+                r"\s*年?\s*(?:以前|之前)"
             ),
         ],
     )
@@ -998,7 +1091,9 @@ def detect_requested_concepts(
     """Detect explicitly requested concepts."""
 
     normalized_query = normalize_text(
-        query
+        expand_traditional_chinese_query(
+            query
+        )
     )
 
     requested_concepts: list[str] = []
