@@ -1008,13 +1008,24 @@ def extract_filters(
     ):
         filters["is_free"] = True
 
-    if "linux" in normalized_query:
+    # BUG FIX: the previous version matched "linux" / "mac" / "win" as bare
+    # substrings (either via `"win" in normalized_query`-style checks, or
+    # via a regex with no \b word boundaries). That silently misfired on
+    # ordinary English words that merely CONTAIN those letters, e.g.:
+    #   "a twin stick shooter"   -> "win" substring -> wrongly added
+    #                               platform: Windows
+    #   "games about winning"    -> same false positive
+    #   "unwind after work"      -> same false positive
+    # Every platform check below now requires the keyword to appear as its
+    # own whole word (\b...\b), so it only fires on an actual platform
+    # mention. A short regression test for this lives in
+    # tests/test_hybrid_search.py::test_platform_filter_ignores_substrings.
+    if re.search(r"\blinux\b", normalized_query):
         filters["platform"] = "Linux"
 
-    elif (
-        "mac" in normalized_query
-        or "macos" in normalized_query
-        or "macbook" in normalized_query
+    elif re.search(
+        r"\b(?:mac|macos|macbook)\b",
+        normalized_query,
     ) or re.search(
         r"(?:蘋果電腦|苹果电脑|蘋果|苹果|麥金塔)",
         query,
@@ -1022,13 +1033,13 @@ def extract_filters(
     ):
         filters["platform"] = "Mac"
 
-    elif (
-        "windows" in normalized_query
-        or re.search(
-            r"(?:win(?:dows)?|視窗|视窗)",
-            query,
-            flags=re.IGNORECASE,
-        )
+    elif re.search(
+        r"\bwin(?:dows)?\b",
+        normalized_query,
+    ) or re.search(
+        r"(?:視窗|视窗)",
+        query,
+        flags=re.IGNORECASE,
     ):
         filters["platform"] = "Windows"
 
