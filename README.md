@@ -576,13 +576,17 @@ evaluation/evaluation_summary.md
 
 ## 🧪 Automated Testing
 
-The project currently contains 16 automated tests.
+The project currently contains 17 automated tests.
 
 The tests cover:
 
 - Price extraction
 - Review-percentage extraction
-- Platform filtering
+- Platform filtering, including a regression test that platform keywords
+  only match whole words (`test_platform_filter_ignores_substrings`) --
+  added after a real bug where `"win"` matched inside ordinary words
+  like "twin" or "winning" and silently added an unrequested
+  `platform: Windows` filter
 - Release-year filtering
 - Official co-op filtering
 - Clarification behaviour
@@ -603,8 +607,8 @@ python -m pytest -q
 Expected result:
 
 ```text
-................
-16 passed
+.................
+17 passed
 ```
 
 ---
