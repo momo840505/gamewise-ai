@@ -164,6 +164,25 @@ def test_extract_filters_detects_all_constraints() -> None:
     assert filters["play_mode"] == "co-op"
 
 
+def test_platform_filter_ignores_substrings() -> None:
+    """
+    Regression test for a bug where the platform regex had no \\b word
+    boundaries, so any word merely CONTAINING "win", "mac", or "linux"
+    as a substring incorrectly set platform: Windows/Mac/Linux even
+    though the user never mentioned a platform.
+    """
+
+    assert "platform" not in extract_filters("a twin stick shooter")
+    assert "platform" not in extract_filters("games about winning")
+    assert "platform" not in extract_filters("unwind after a long day")
+
+    # Whole-word mentions must still work correctly.
+    assert extract_filters("a game for windows")["platform"] == "Windows"
+    assert extract_filters("a game for win")["platform"] == "Windows"
+    assert extract_filters("a game for mac")["platform"] == "Mac"
+    assert extract_filters("a game for linux")["platform"] == "Linux"
+
+
 def test_extract_filters_supports_traditional_chinese_query() -> None:
     """Traditional Chinese portfolio queries should map to structured filters."""
 
