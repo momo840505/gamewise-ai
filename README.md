@@ -12,7 +12,7 @@ GameWise understands your budget, platform, review requirements, release year, p
 ![Python](https://img.shields.io/badge/Python-3.13-3776AB?logo=python&logoColor=white)
 ![Streamlit](https://img.shields.io/badge/Streamlit-Interactive%20Application-FF4B4B?logo=streamlit&logoColor=white)
 ![Sentence Transformers](https://img.shields.io/badge/Embeddings-all--MiniLM--L6--v2-6F52ED)
-![Tests](https://img.shields.io/badge/tests-16%20passed-2EA44F)
+![Tests](https://img.shields.io/badge/tests-24%20passed-2EA44F)
 ![Evaluation](https://img.shields.io/badge/evaluation-11%2F11%20passed-2EA44F)
 
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-Open%20GameWise-FF4B4B?logo=streamlit&logoColor=white)](https://gamewise-ai.streamlit.app)
@@ -528,7 +528,7 @@ The retrieval pipeline was evaluated using 11 representative scenarios:
 | Valid-title rate | **100%** |
 | Duplicate-free rate | **100%** |
 | Metadata-term relevance@5 | **100%** |
-| Automated tests | **16 passed** |
+| Automated tests | **24 passed** |
 
 ### Metric definitions
 
@@ -607,8 +607,8 @@ python -m pytest -q
 Expected result:
 
 ```text
-.................
-17 passed
+........................
+24 passed
 ```
 
 ---
@@ -896,11 +896,22 @@ gamewise-ai/
 │   ├── clean_dataset.py
 │   ├── evaluate_retrieval.py
 │   ├── generate_answer.py
-│   └── hybrid_search.py
+│   ├── hybrid_search.py
+│   ├── inspect_dataset.py
+│   └── semantic_search.py
 │
-└── tests/
-    ├── test_generate_answer.py
-    └── test_hybrid_search.py
+├── tests/
+│   ├── test_generate_answer.py
+│   └── test_hybrid_search.py
+│
+├── .streamlit/
+│   └── config.toml
+│
+├── .github/
+│   └── workflows/
+│       └── tests.yml
+│
+└── LICENSE
 ```
 
 ---
