@@ -999,8 +999,11 @@ def extract_filters(
             release_year_before
         )
 
+    # Same CJK-adjacency issue as the platform checks above: \b fails to
+    # match "free" when it touches a CJK character with no space (e.g.
+    # 限定free方案, 有free遊戲). Explicit ASCII-letter lookaround instead.
     if re.search(
-        r"\bfree(?:[- ]to[- ]play)?\b",
+        r"(?<![a-zA-Z])free(?:[- ]to[- ]play)?(?![a-zA-Z])",
         normalized_query,
     ) or re.search(
         r"(?:免費|免费|不用錢|不用钱|零元)",
