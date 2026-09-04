@@ -58,6 +58,10 @@ No local installation is required. Enter a natural-language game request to expl
 
 > GameWise converts a natural-language request into structured constraints, filters unsuitable games, ranks the remaining candidates, and explains why each recommendation matches.
 
+![GameWise AI individual recommendation with match reasoning](docs/images/recommended_games.png)
+
+> Each recommendation shows a "why it fits" breakdown covering budget, play-mode, and genre/tag matches.
+
 ---
 
 ## ✨ Overview
@@ -885,7 +889,7 @@ gamewise-ai/
 │       ├── clarification.png
 │       ├── no_results.png
 │       ├── developer_mode.png
-│       └── "Recommended games.png"
+│       └── recommended_games.png
 │
 ├── evaluation/
 │   ├── evaluation_cases.json
