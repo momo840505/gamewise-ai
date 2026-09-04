@@ -1020,11 +1020,21 @@ def extract_filters(
     # own whole word (\b...\b), so it only fires on an actual platform
     # mention. A short regression test for this lives in
     # tests/test_hybrid_search.py::test_platform_filter_ignores_substrings.
-    if re.search(r"\blinux\b", normalized_query):
+    # NOTE: \b (word boundary) does not work here for the Chinese-
+    # adjacent case below. Python's re treats CJK characters as \w
+    # (word) characters, so there is no boundary between e.g. "援"
+    # and "M" in "支援Mac" -- \bMac\b silently fails to match right at
+    # the point that matters. Using an explicit ASCII-letter lookaround
+    # instead keeps the original false-positive fix (twin/winning/
+    # unwind still correctly excluded, since those are only blocked by
+    # an adjacent ASCII letter) while also matching "支援Mac" with no
+    # space before the keyword. See
+    # tests/test_hybrid_search.py::test_extract_filters_supports_more_chinese_phrases.
+    if re.search(r"(?<![a-zA-Z])linux(?![a-zA-Z])", normalized_query):
         filters["platform"] = "Linux"
 
     elif re.search(
-        r"\b(?:mac|macos|macbook)\b",
+        r"(?<![a-zA-Z])(?:mac|macos|macbook)(?![a-zA-Z])",
         normalized_query,
     ) or re.search(
         r"(?:蘋果電腦|苹果电脑|蘋果|苹果|麥金塔)",
@@ -1034,7 +1044,7 @@ def extract_filters(
         filters["platform"] = "Mac"
 
     elif re.search(
-        r"\bwin(?:dows)?\b",
+        r"(?<![a-zA-Z])win(?:dows)?(?![a-zA-Z])",
         normalized_query,
     ) or re.search(
         r"(?:視窗|视窗)",
