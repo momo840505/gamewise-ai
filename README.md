@@ -197,18 +197,15 @@ GameWise was designed to:
                  ▼
 ┌─────────────────────────────────┐
 │ Candidate game collection       │
-└───────┬─────────┬─────────┬─────┘
-        │         │         │
-        ▼         ▼         ▼
- Semantic     Concept     Play-mode
- similarity  relevance    preference
-        │         │         │
-        └────┬────┴────┬────┘
-             │         │
-             ▼         ▼
-       Review-quality signal
-                 │
-                 ▼
+└─────┬───────┬───────┬───────┬───┘
+      │       │       │       │
+      ▼       ▼       ▼       ▼
+ Semantic  Concept  Play-mode Review
+similarity relevance preference quality
+      │       │       │       │
+      └───────┴───┬───┴───────┘
+                  │
+                  ▼
 ┌─────────────────────────────────┐
 │ Hybrid ranking                  │
 └────────────────┬────────────────┘
