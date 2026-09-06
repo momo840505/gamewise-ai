@@ -183,6 +183,28 @@ def test_platform_filter_ignores_substrings() -> None:
     assert extract_filters("a game for linux")["platform"] == "Linux"
 
 
+def test_play_mode_ignores_known_ambiguous_substrings() -> None:
+    """
+    Regression test for the same class of bug as
+    test_platform_filter_ignores_substrings, but for keyword ambiguity
+    rather than a missing \b boundary: "coop" is also the English word
+    for a chicken enclosure, and the Chinese multiplayer keyword "多人"
+    is also the tail of "很多人" ("a lot of people"). Neither query below
+    is asking for a play mode, so play_mode must not be set.
+    """
+
+    assert "play_mode" not in extract_filters(
+        "a relaxing farming game with a chicken coop"
+    )
+    assert "play_mode" not in extract_filters(
+        "很多人推薦這款遊戲，畫面很漂亮"
+    )
+
+    # Whole-word / genuine mentions must still work correctly.
+    assert extract_filters("a coop game with friends")["play_mode"] == "co-op"
+    assert extract_filters("多人遊戲")["play_mode"] == "multiplayer"
+
+
 def test_extract_filters_supports_traditional_chinese_query() -> None:
     """Traditional Chinese portfolio queries should map to structured filters."""
 
