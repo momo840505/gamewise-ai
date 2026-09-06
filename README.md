@@ -13,7 +13,7 @@ GameWise understands your budget, platform, review requirements, release year, p
 ![Streamlit](https://img.shields.io/badge/Streamlit-Interactive%20Application-FF4B4B?logo=streamlit&logoColor=white)
 ![Sentence Transformers](https://img.shields.io/badge/Embeddings-all--MiniLM--L6--v2-6F52ED)
 ![Tests](https://img.shields.io/badge/tests-25%20passed-2EA44F)
-![Evaluation](https://img.shields.io/badge/evaluation-11%2F11%20passed-2EA44F)
+![Evaluation](https://img.shields.io/badge/evaluation-14%2F14%20passed-2EA44F)
 
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-Open%20GameWise-FF4B4B?logo=streamlit&logoColor=white)](https://gamewise-ai.streamlit.app)
 <br>
@@ -506,7 +506,7 @@ The retrieval system remains fully functional without an OpenAI API key.
 
 ### Evaluation coverage
 
-The retrieval pipeline was evaluated using 11 representative scenarios:
+The retrieval pipeline was evaluated using 14 representative scenarios:
 
 1. Cooperative survival
 2. Relaxing single-player
@@ -519,17 +519,24 @@ The retrieval pipeline was evaluated using 11 representative scenarios:
 9. Recent multiplayer shooter
 10. Broad-query clarification
 11. Impossible-condition handling
+12. Traditional Chinese cooperative survival
+13. Traditional Chinese Mac farming simulation
+14. Traditional Chinese broad-query clarification
 
 ### Current evaluation results
 
 | Metric | Result |
 |---|---:|
-| Expected search behaviour | **11 / 11 passed** |
+| Expected search behaviour | **14 / 14 passed** |
 | Hard-filter accuracy | **100%** |
 | Valid-title rate | **100%** |
 | Duplicate-free rate | **100%** |
 | Metadata-term relevance@5 | **100%** |
 | Automated tests | **25 passed** |
+
+### What these metrics don't measure
+
+All five metrics above check that the pipeline behaves *correctly and safely* — valid, filter-satisfying, non-duplicate results, or the right fallback (clarification / no-result) for the case. None of them grade whether the ranking *order* within a result set is actually good; that would need a metric like nDCG or MRR against human-labeled relevance judgements, which don't exist for this dataset. The closest thing to that today is a handful of unit tests that assert specific ordering claims directly (for example `test_play_mode_score_fixes_original_ranking_problem`), which is real but narrower than an aggregate ranking-quality score.
 
 ### Metric definitions
 
@@ -804,7 +811,7 @@ Do not run:
 python scripts/evaluate_retrieval.py
 ```
 
-Using module mode ensures that imports such as `scripts.hybrid_search` are resolved correctly.
+Using module mode ensures that imports such as `scripts.search` are resolved correctly.
 
 The evaluation produces:
 
@@ -902,10 +909,14 @@ gamewise-ai/
 │   ├── build_embeddings.py
 │   ├── clean_dataset.py
 │   ├── evaluate_retrieval.py
+│   ├── formatting.py
 │   ├── generate_answer.py
-│   ├── hybrid_search.py
 │   ├── inspect_dataset.py
-│   └── semantic_search.py
+│   ├── query_filters.py
+│   ├── ranking.py
+│   ├── search.py
+│   ├── semantic_search.py
+│   └── text_utils.py
 │
 ├── tests/
 │   ├── test_generate_answer.py
