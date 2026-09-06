@@ -65,7 +65,7 @@ Hybrid ranking
 Top-k Steam records
    |
    v
-Grounded explanation
+Context-constrained explanation
 ```
 
 ## Features
