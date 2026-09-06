@@ -1,70 +1,72 @@
 # Retrieval Evaluation
 
-GameWise AI evaluates the retrieval system as an engineering component rather than treating recommendations as a subjective demo.
+I wanted more than "it looks right when I try a few queries" before I called retrieval done, so this is the evaluation I actually run against it -- what it checks, what it doesn't, and where I'd take it next.
 
-## Evaluation Goals
+## What I'm actually checking
 
-The evaluation suite checks whether the system:
+The evaluation suite runs a fixed set of queries through the real pipeline and checks that it:
 
-- preserves explicit user constraints before ranking;
-- returns valid Steam titles without duplicates;
-- asks for clarification when a query is too broad;
-- reports no matching results when constraints are impossible;
-- ranks games using semantic, concept, play-mode, and review-quality signals;
-- keeps generated summaries grounded in retrieved metadata.
+- keeps every explicit constraint the user stated instead of quietly dropping one during ranking
+- only returns valid, non-duplicate Steam titles
+- asks for clarification when a query is too broad to mean anything specific
+- reports no results honestly when the constraints can't all be satisfied, instead of relaxing one to have something to show
+- actually uses all four ranking signals (semantic, concept, play-mode, review quality), not just semantic similarity
+- keeps generated summaries grounded in the retrieved metadata rather than inventing details
 
-## Current Evaluation Coverage
+## Current coverage: 14 scenarios
 
-The current evaluation set covers 11 representative scenarios:
+- cooperative survival
+- relaxing single-player
+- free psychological horror
+- Linux tactical strategy
+- recent co-op adventure
+- story-rich RPG
+- Windows racing
+- Mac farming simulation
+- recent multiplayer shooter
+- broad-query clarification
+- impossible-condition handling
+- Traditional Chinese cooperative survival
+- Traditional Chinese Mac farming simulation
+- Traditional Chinese broad-query clarification
 
-- cooperative survival;
-- relaxing single-player;
-- free psychological horror;
-- Linux tactical strategy;
-- recent co-op adventure;
-- story-rich RPG;
-- Windows racing;
-- Mac farming simulation;
-- recent multiplayer shooter;
-- broad-query clarification;
-- impossible-condition handling.
+The last three got added once I built out Traditional Chinese query support -- I didn't want the evaluation set to only ever exercise the English path.
 
 ## Metrics
 
-| Metric | Purpose |
+| Metric | What it's actually checking |
 |---|---|
-| Expected search behaviour | Confirms that each query returns recommendations, asks for clarification, or reports no results as expected. |
-| Hard-filter accuracy | Verifies that every returned game satisfies extracted constraints such as price, review threshold, platform, release year, free status, and official play mode. |
-| Valid-title rate | Ensures recommendations do not contain blank, placeholder, or invalid game names. |
-| Duplicate-free rate | Confirms that a recommendation set does not repeat the same title. |
-| Metadata-term relevance@5 | Checks whether the top recommendations contain relevant terms in genres, tags, categories, or descriptions. |
+| Expected search behaviour | Did each query get the right kind of response -- recommendations, a clarification prompt, or a no-result message? |
+| Hard-filter accuracy | Does every returned game actually satisfy every constraint I extracted from the query (price, review threshold, platform, release year, free status, official play mode)? |
+| Valid-title rate | No blank, placeholder, or garbage titles in the results. |
+| Duplicate-free rate | The same game doesn't show up twice in one result set. |
+| Metadata-term relevance@5 | Do the top results actually contain a relevant term in their genres, tags, categories, or description? |
 
-## Why Hard Filters Run Before Ranking
+I go into why none of this is a ranking-quality metric (nDCG/MRR territory) in the main README's Evaluation section -- these five checks are about correctness and safety, not about whether the *order* of results is good.
 
-GameWise applies strict filters before semantic ranking. A semantically similar game is removed if it violates an explicit user requirement.
+## Why hard filters run before ranking, not after
 
-Examples:
+If I let semantic similarity rank first and filtered afterward, an over-budget or wrong-platform game could still surface if it happened to score well semantically -- and it did, early on. So constraints get applied as a hard cut before ranking ever sees the candidates:
 
-- a game over the requested budget is excluded;
-- a game below the minimum review threshold is excluded;
-- a Windows-only game is excluded from a Mac query;
-- a multiplayer game is excluded when official co-op support is requested;
-- a paid game is excluded from a free-game query.
+- over budget → excluded
+- below the minimum review threshold → excluded
+- wrong platform → excluded
+- doesn't satisfy official co-op when co-op was requested → excluded
+- paid when free was requested → excluded
 
-This design is intentionally conservative because recommendation systems are easier to trust when stated constraints are never silently weakened.
+I'd rather return fewer results than one that looks great but breaks something the user actually asked for.
 
-## Recommended Next Evaluation Upgrades
+## Where I'd take this next
 
-- Expand the test set from 11 to 30-50 queries.
-- Add Traditional Chinese query examples.
-- Track recall@k against curated expected-title sets.
-- Add groundedness checks for generated summaries.
-- Add latency measurements for cold-start and warm-cache searches.
-- Add a small human relevance review set for ambiguous subjective queries.
+- Grow the query set past 14 -- ideally into the 30-50 range, across more genre/platform/language combinations
+- Track recall@k against a curated set of expected titles per query, instead of just checking that constraints hold
+- Add a groundedness check specifically for the generated summaries
+- Measure cold-start vs. warm-cache latency separately
+- Get a small human relevance panel together for the genuinely subjective queries, where "good match" isn't something a rule can fully capture
 
-## CI Integration
+## CI
 
-The GitHub Actions workflow runs:
+Every push and PR runs:
 
 ```bash
 python -m pytest -q
@@ -72,4 +74,4 @@ python -m scripts.evaluate_retrieval
 python -m compileall -q app.py scripts tests
 ```
 
-This keeps retrieval behaviour, tests, and import health visible on every push and pull request.
+so retrieval behaviour, the test suite, and basic import health are all checked automatically rather than something I have to remember to run by hand.

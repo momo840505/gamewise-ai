@@ -29,14 +29,12 @@ GameWise understands your budget, platform, review requirements, release year, p
 
 ---
 
-## Portfolio Engineering Notes
+## A Couple of Deeper Writeups
 
-This repository now includes additional engineering documentation:
+I wrote two extra docs that go into more depth than makes sense to cram into this README:
 
-- [Retrieval evaluation](docs/retrieval_evaluation.md)
-- [Traditional Chinese extension plan](docs/traditional_chinese_extension.md)
-
-These notes explain how the recommendation system is evaluated, how strict user constraints are preserved, and how the project can be extended toward Taiwan-market multilingual AI use cases.
+- [Retrieval evaluation](docs/retrieval_evaluation.md) -- what the evaluation suite actually checks and where I'd take it next
+- [Traditional Chinese query support](docs/traditional_chinese_extension.md) -- why I added it and how it actually works under the hood
 
 ---
 
@@ -532,7 +530,7 @@ The retrieval pipeline was evaluated using 14 representative scenarios:
 | Valid-title rate | **100%** |
 | Duplicate-free rate | **100%** |
 | Metadata-term relevance@5 | **100%** |
-| Automated tests | **25 passed** |
+| Automated tests | **27 passed** |
 
 ### What these metrics don't measure
 
@@ -570,7 +568,7 @@ Checks that the same game title does not appear more than once in a single recom
 
 Checks whether each top-five recommendation contains at least one separately defined relevance term in its genres, tags, or description.
 
-> The evaluation results apply to the current 11 test cases and the selected 1,495-game dataset. They do not represent universal accuracy across the complete Steam catalogue or every possible user query.
+> The evaluation results apply to the current 14 test cases and the selected 1,495-game dataset. They do not represent universal accuracy across the complete Steam catalogue or every possible user query.
 
 ### Evaluation files
 
@@ -584,7 +582,7 @@ evaluation/evaluation_summary.md
 
 ## 🧪 Automated Testing
 
-The project currently contains 25 automated tests.
+The project currently contains 27 automated tests.
 
 The tests cover:
 
@@ -602,6 +600,15 @@ The tests cover:
   real bug where the English word `"coop"` (as in "chicken coop") and
   the Chinese multiplayer keyword `"多人"` (as the tail of `"很多人"`,
   "a lot of people") silently added an unrequested `play_mode` filter
+- Play-mode detection ignoring generic Chinese cooperation words
+  (`test_play_mode_ignores_generic_cooperation_words`) -- the same class
+  of bug one level up: `"合作"` ("cooperate") and `"跟朋友"`/`"和朋友"`
+  ("with a friend") are ordinary words with no gameplay meaning on
+  their own, e.g. a game announcing a brand tie-in
+- Concept detection ignoring the generic "choose" verb
+  (`test_detect_requested_concepts_ignores_generic_choose_verb`) --
+  `"選擇"` mapped to the "choices matter" concept, but it is mostly just
+  the verb "to choose" in a request like "help me choose a game"
 - Clarification behaviour
 - Invalid game-name filtering
 - Embedding and metadata alignment
@@ -620,8 +627,8 @@ python -m pytest -q
 Expected result:
 
 ```text
-.........................
-25 passed
+...........................
+27 passed
 ```
 
 ---
@@ -989,7 +996,7 @@ Loading the Sentence Transformer model is the slow part, so it's cached and only
 
 A few things worth being upfront about, since they came up while actually building and reviewing this project rather than being planned from the start:
 
-**The same bug kept reappearing in slightly different clothes.** The platform filter, the free-game filter, and the play-mode filter all independently had the same underlying problem: Python's `re` module treats CJK characters as word characters, so a plain `\b` boundary silently fails right at the point where an English keyword touches Chinese text with no space (`支援Mac`, `限定free方案`). I fixed it three separate times before I noticed it was the same bug each time, which is itself a useful lesson -- a targeted patch in one place doesn't protect the next place the same pattern shows up. There's a related but genuinely different flavor of the same problem in play-mode detection: "coop" is also the English word for a chicken enclosure, and "多人" (multiplayer) is also just the tail end of "很多人" (a lot of people). Those aren't boundary bugs, they're real ambiguity in natural language, so I excluded the specific known collisions rather than pretending there's a clean general fix.
+**The same bug kept reappearing in slightly different clothes.** The platform filter, the free-game filter, and the play-mode filter all independently had the same underlying problem: Python's `re` module treats CJK characters as word characters, so a plain `\b` boundary silently fails right at the point where an English keyword touches Chinese text with no space (`支援Mac`, `限定free方案`). I fixed it three separate times before I noticed it was the same bug each time, which is itself a useful lesson -- a targeted patch in one place doesn't protect the next place the same pattern shows up. There's a related but genuinely different flavor of the same problem in play-mode detection: "coop" is also the English word for a chicken enclosure, and "多人" (multiplayer) is also just the tail end of "很多人" (a lot of people). Those aren't boundary bugs, they're real ambiguity in natural language, so I excluded the specific known collisions rather than pretending there's a clean general fix. The same ambiguity showed up again, one level up, with the Traditional Chinese dictionary entries for "合作" ("cooperate") and "跟朋友"/"和朋友" ("with a friend") -- both are just ordinary words in Chinese, not gameplay signals, so "和知名動畫合作推出" ("released in collaboration with a well-known anime") was silently turning into a co-op filter. I ended up removing those bare entries rather than trying to list every non-gameplay use of "合作" -- the more specific phrases already in the dictionary (可以合作, 合作遊玩, 一起玩...) cover the genuine cases without the false positives.
 
 **`scripts/hybrid_search.py` used to be one 2,600+ line file** covering query parsing, ranking, data loading, and CLI formatting all at once. It worked, but it wasn't something I'd want to hand a reviewer and say "start here." It's now split into `text_utils.py`, `query_filters.py`, `ranking.py`, `search.py`, and `formatting.py`, each with one job.
 
@@ -1008,8 +1015,8 @@ A few things worth being upfront about, since they came up while actually buildi
 - Metadata-term relevance is not a replacement for human relevance assessment.
 - The first semantic search may take longer while the model loads.
 - Search history and shortlist data currently exist only during the active Streamlit session.
-- Traditional Chinese query support is a curated keyword dictionary (240+ terms) rather than full free-form Chinese language understanding, so unusual phrasing, Simplified-only slang, or dialectal variants may not be recognized.
-- A small number of keywords are inherently ambiguous in natural language (for example "coop" as in "chicken coop", or "多人" inside "很多人"/"a lot of people"). The known collisions are excluded, but this is a targeted mitigation, not a general solution.
+- Traditional Chinese query support is a curated keyword dictionary (230+ terms) rather than full free-form Chinese language understanding, so unusual phrasing, Simplified-only slang, or dialectal variants may not be recognized.
+- A small number of keywords are inherently ambiguous in natural language (for example "coop" as in "chicken coop", "多人" inside "很多人"/"a lot of people", or "合作"/"跟朋友" used outside any gameplay context). The known collisions are excluded, but this is a targeted mitigation, not a general solution.
 
 ---
 
