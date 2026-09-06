@@ -506,11 +506,24 @@ TRADITIONAL_CHINESE_QUERY_SYNONYMS: dict[str, str] = {
 def expand_traditional_chinese_query(query: str) -> str:
     """Append English equivalents for common Traditional Chinese game queries."""
 
-    expanded_terms = [
-        replacement
-        for term, replacement in TRADITIONAL_CHINESE_QUERY_SYNONYMS.items()
-        if term in query
-    ]
+    # BUG FIX: this used to be a single plain `term in query` containment
+    # check for every dictionary entry. That is the same substring-match
+    # problem the extract_filters comments below describe, and it bites
+    # here first: "多人" ("multiplayer") is also the tail of "很多人" /
+    # "好多人" / "許多人" ("a lot of people"), e.g. "很多人推薦這款遊戲"
+    # ("a lot of people recommend this game"). A plain substring check
+    # silently appended the English word "multiplayer" to the expanded
+    # query, which extract_filters then picked up as a real play-mode
+    # request. "多人" is special-cased with a negative lookbehind for the
+    # known "many people" prefixes instead of a bare containment check.
+    expanded_terms = []
+    for term, replacement in TRADITIONAL_CHINESE_QUERY_SYNONYMS.items():
+        if term == "多人":
+            if re.search(r"(?<![很好許许眾众])多人", query):
+                expanded_terms.append(replacement)
+            continue
+        if term in query:
+            expanded_terms.append(replacement)
 
     if not expanded_terms:
         return query
@@ -1075,6 +1088,21 @@ def extract_filters(
             "play_mode"
         ] = "single-player"
 
+    # BUG FIX: play-mode detection had the same class of bug as the
+    # platform/free-game checks above, but caused by keyword AMBIGUITY
+    # rather than CJK-adjacency. "coop" is also the ordinary English word
+    # for a chicken enclosure (e.g. "a farming game set around a chicken
+    # coop"), and the Chinese multiplayer keyword "多人" is also the tail
+    # of the common phrase "很多人" ("a lot of people"), e.g. "很多人推薦
+    # 這款遊戲" ("a lot of people recommend this game"). Both were
+    # matching as bare substrings and silently forcing an unrequested
+    # play_mode filter. Unlike the earlier \b/lookaround fixes, this is a
+    # genuine natural-language ambiguity rather than a boundary bug, so a
+    # complete fix would need real language understanding; what is
+    # practical here is to exclude the specific known collisions with a
+    # negative lookbehind, and document the residual ambiguity in the
+    # README's Limitations section. See
+    # tests/test_hybrid_search.py::test_play_mode_ignores_known_ambiguous_substrings.
     elif any(
         phrase in normalized_query
         for phrase in [
@@ -1082,9 +1110,11 @@ def extract_filters(
             "online coop",
             "cooperative",
             "co-op",
-            "coop",
             "local co-op",
         ]
+    ) or re.search(
+        r"(?<!chicken)(?<!chicken )\bcoop\b",
+        normalized_query,
     ) or re.search(
         r"(?:多人合作|多人协作|連線合作|联机合作|"
         r"連機合作|線上合作|线上合作|本地合作|"
@@ -1107,7 +1137,7 @@ def extract_filters(
     ) or re.search(
         r"(?:多人連線|多人联机|線上多人|线上多人|"
         r"多人連機|連機|联机|網路多人|网络多人|"
-        r"多人遊戲|多人游戏|多人)",
+        r"多人遊戲|多人游戏|(?<![很好許许眾众])多人)",
         query,
     ):
         filters[
