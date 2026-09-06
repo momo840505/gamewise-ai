@@ -139,3 +139,15 @@ def test_empty_results_do_not_call_model() -> None:
         "No games satisfy"
         in answer_text
     )
+
+def test_zero_price_paid_record_is_not_labeled_free() -> None:
+    search_results = create_search_results()
+    search_results.loc[0, "price_usd"] = 0.0
+    search_results.loc[0, "is_free"] = False
+
+    context = build_retrieval_context(
+        search_results
+    )
+
+    assert "Price: $0.00" in context
+    assert "Price: Free" not in context

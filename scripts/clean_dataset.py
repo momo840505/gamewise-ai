@@ -11,6 +11,15 @@ PROCESSED_DATA_PATH = Path("data/processed/steam_games_cleaned.csv")
 QUALITY_REPORT_PATH = Path("data/processed/data_quality_report.json")
 
 
+BOOLEAN_COLUMNS = [
+    "coming_soon",
+    "is_free",
+    "platforms_win",
+    "platforms_mac",
+    "platforms_linux",
+]
+
+
 TEXT_COLUMNS_WITH_DEFAULTS = {
     "name": "Unknown title",
     "developer": "Unknown developer",
@@ -50,6 +59,39 @@ def clean_text_series(
     cleaned_series = cleaned_series.fillna(default_value)
 
     return cleaned_series
+
+
+def normalize_boolean_series(series: pd.Series) -> pd.Series:
+    # Convert common boolean values and reject unexpected strings.
+    if pd.api.types.is_bool_dtype(series):
+        return series.fillna(False).astype(bool)
+
+    normalized = (
+        series.fillna("")
+        .astype(str)
+        .str.strip()
+        .str.casefold()
+    )
+
+    true_values = {"true", "1", "yes", "y"}
+    false_values = {"false", "0", "no", "n", ""}
+
+    unknown_values = ~normalized.isin(
+        true_values | false_values
+    )
+
+    if unknown_values.any():
+        examples = sorted(
+            normalized[unknown_values]
+            .drop_duplicates()
+            .tolist()
+        )[:5]
+        raise ValueError(
+            "Unexpected Boolean values: "
+            + ", ".join(examples)
+        )
+
+    return normalized.isin(true_values)
 
 
 def clean_comma_separated_value(value: object) -> str:
@@ -190,6 +232,13 @@ def clean_dataset(
         keep="first",
     ).copy()
 
+    for column_name in BOOLEAN_COLUMNS:
+        dataframe[column_name] = (
+            normalize_boolean_series(
+                dataframe[column_name]
+            )
+        )
+
     for (
         column_name,
         default_value,
@@ -264,6 +313,17 @@ def clean_dataset(
         dataframe["price_usd"]
         .clip(lower=0)
         .round(2)
+    )
+
+    dataframe["price_is_consistent"] = (
+        (
+            dataframe["is_free"]
+            & dataframe["price_usd"].eq(0)
+        )
+        | (
+            ~dataframe["is_free"]
+            & dataframe["price_usd"].gt(0)
+        )
     )
 
     integer_columns = [
@@ -353,6 +413,9 @@ def clean_dataset(
         "games_without_reviews": int(
             (~dataframe["has_reviews"]).sum()
         ),
+        "price_free_inconsistencies": int(
+            (~dataframe["price_is_consistent"]).sum()
+        ),
         "missing_values_before_cleaning":
             missing_values_before,
         "generated_columns": [
@@ -366,6 +429,7 @@ def clean_dataset(
             "platforms",
             "steam_store_url",
             "searchable_text",
+            "price_is_consistent",
         ],
     }
 

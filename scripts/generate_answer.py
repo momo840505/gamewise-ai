@@ -53,10 +53,7 @@ def format_price(
         == "true"
     )
 
-    if is_free or (
-        not pd.isna(price)
-        and float(price) == 0
-    ):
+    if is_free:
         return "Free"
 
     if pd.isna(price):

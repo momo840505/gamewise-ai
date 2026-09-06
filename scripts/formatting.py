@@ -107,15 +107,9 @@ def format_price(
         errors="coerce",
     )
 
-    if (
-        is_free_value(
-            row.get(
-                "is_free"
-            )
-        )
-        or (
-            not pd.isna(price)
-            and float(price) == 0
+    if is_free_value(
+        row.get(
+            "is_free"
         )
     ):
         return "Free"

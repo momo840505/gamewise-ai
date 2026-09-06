@@ -25,6 +25,9 @@ INVALID_GAME_NAMES = {
     "unknown",
     "unknown game",
     "unknown title",
+    "removed",
+    "delisted",
+    "unavailable",
 }
 
 
@@ -362,9 +365,7 @@ def extract_filters(
             release_year_before
         )
 
-    # Same CJK-adjacency issue as the platform checks above: \b fails to
-    # match "free" when it touches a CJK character with no space (e.g.
-    # 限定free方案, 有free遊戲). Explicit ASCII-letter lookaround instead.
+    # Match English free keywords next to CJK text without substring false positives.
     if re.search(
         r"(?<![a-zA-Z])free(?:[- ]to[- ]play)?(?![a-zA-Z])",
         normalized_query,
@@ -374,28 +375,7 @@ def extract_filters(
     ):
         filters["is_free"] = True
 
-    # BUG FIX: the previous version matched "linux" / "mac" / "win" as bare
-    # substrings (either via `"win" in normalized_query`-style checks, or
-    # via a regex with no \b word boundaries). That silently misfired on
-    # ordinary English words that merely CONTAIN those letters, e.g.:
-    #   "a twin stick shooter"   -> "win" substring -> wrongly added
-    #                               platform: Windows
-    #   "games about winning"    -> same false positive
-    #   "unwind after work"      -> same false positive
-    # Every platform check below now requires the keyword to appear as its
-    # own whole word (\b...\b), so it only fires on an actual platform
-    # mention. A short regression test for this lives in
-    # tests/test_hybrid_search.py::test_platform_filter_ignores_substrings.
-    # NOTE: \b (word boundary) does not work here for the Chinese-
-    # adjacent case below. Python's re treats CJK characters as \w
-    # (word) characters, so there is no boundary between e.g. "援"
-    # and "M" in "支援Mac" -- \bMac\b silently fails to match right at
-    # the point that matters. Using an explicit ASCII-letter lookaround
-    # instead keeps the original false-positive fix (twin/winning/
-    # unwind still correctly excluded, since those are only blocked by
-    # an adjacent ASCII letter) while also matching "支援Mac" with no
-    # space before the keyword. See
-    # tests/test_hybrid_search.py::test_extract_filters_supports_more_chinese_phrases.
+    # Platform names must match as standalone ASCII terms, including CJK-adjacent text.
     if re.search(r"(?<![a-zA-Z])linux(?![a-zA-Z])", normalized_query):
         filters["platform"] = "Linux"
 
@@ -438,21 +418,7 @@ def extract_filters(
             "play_mode"
         ] = "single-player"
 
-    # BUG FIX: play-mode detection had the same class of bug as the
-    # platform/free-game checks above, but caused by keyword AMBIGUITY
-    # rather than CJK-adjacency. "coop" is also the ordinary English word
-    # for a chicken enclosure (e.g. "a farming game set around a chicken
-    # coop"), and the Chinese multiplayer keyword "多人" is also the tail
-    # of the common phrase "很多人" ("a lot of people"), e.g. "很多人推薦
-    # 這款遊戲" ("a lot of people recommend this game"). Both were
-    # matching as bare substrings and silently forcing an unrequested
-    # play_mode filter. Unlike the earlier \b/lookaround fixes, this is a
-    # genuine natural-language ambiguity rather than a boundary bug, so a
-    # complete fix would need real language understanding; what is
-    # practical here is to exclude the specific known collisions with a
-    # negative lookbehind, and document the residual ambiguity in the
-    # README's Limitations section. See
-    # tests/test_hybrid_search.py::test_play_mode_ignores_known_ambiguous_substrings.
+    # Exclude known ambiguous uses of coop/multiplayer terms.
     elif any(
         phrase in normalized_query
         for phrase in [
@@ -603,21 +569,7 @@ def apply_filters(
             )
         )
 
-        zero_price_mask = (
-            pd.to_numeric(
-                game_dataframe[
-                    "price_usd"
-                ],
-                errors="coerce",
-            )
-            .fillna(np.inf)
-            == 0
-        )
-
-        result_mask &= (
-            free_game_mask
-            | zero_price_mask
-        )
+        result_mask &= free_game_mask
 
     if "platform" in filters:
         requested_platform = str(

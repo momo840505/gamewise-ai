@@ -242,31 +242,7 @@ TRADITIONAL_CHINESE_QUERY_SYNONYMS: dict[str, str] = {
 def expand_traditional_chinese_query(query: str) -> str:
     """Append English equivalents for common Traditional Chinese game queries."""
 
-    # BUG FIX: this used to be a single plain `term in query` containment
-    # check for every dictionary entry. That is the same substring-match
-    # problem the extract_filters comments above describe, and it bites
-    # here first: "多人" ("multiplayer") is also the tail of "很多人" /
-    # "好多人" / "許多人" ("a lot of people"), e.g. "很多人推薦這款遊戲"
-    # ("a lot of people recommend this game"). A plain substring check
-    # silently appended the English word "multiplayer" to the expanded
-    # query, which extract_filters then picked up as a real play-mode
-    # request. "多人" is special-cased with a negative lookbehind for the
-    # known "many people" prefixes instead of a bare containment check.
-    #
-    # The dictionary also used to have bare entries for "合作"/"協作"/
-    # "協力" ("cooperate"/"collaborate") and "跟朋友"/"和朋友"/"與朋友"
-    # ("with a friend"), which are ordinary Chinese words used constantly
-    # outside any game-mode context, e.g. "和知名動畫合作推出" ("released
-    # in collaboration with a well-known anime") or "跟朋友討論過這款遊戲"
-    # ("discussed this game with a friend"). Both silently forced
-    # play_mode to co-op. Rather than chase every non-gameplay use of
-    # those words with more lookarounds, they were removed in favor of
-    # the more specific phrases already in this dictionary that actually
-    # mean "play together" (可以合作, 合作遊玩, 一起玩, 朋友一起, etc.).
-    # Same reasoning for "選擇" ("choose"), which mapped to "choices
-    # matter" but is mostly just the verb "to choose" in a request like
-    # "幫我選擇一款遊戲" ("help me choose a game") -- "多結局" ("multiple
-    # endings") already covers that concept without the ambiguity.
+    # Avoid known substring collisions in common Chinese phrases.
     expanded_terms = []
     for term, replacement in TRADITIONAL_CHINESE_QUERY_SYNONYMS.items():
         if term == "多人":

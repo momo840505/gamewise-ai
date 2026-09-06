@@ -22,6 +22,7 @@ from scripts.ranking import (
     calculate_quality_scores,
     detect_requested_concepts,
 )
+from scripts.text_utils import expand_traditional_chinese_query
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -246,9 +247,13 @@ def search_games(
         load_embedding_model()
     )
 
+    semantic_query = expand_traditional_chinese_query(
+        cleaned_query
+    )
+
     query_embedding = (
         embedding_model.encode(
-            [cleaned_query],
+            [semantic_query],
             normalize_embeddings=True,
             convert_to_numpy=True,
         )[0]
@@ -345,9 +350,9 @@ def search_games(
 
     ranked_positions = (
         np.argsort(
-            hybrid_scores,
+            -hybrid_scores,
             kind="stable",
-        )[::-1][
+        )[
             :number_of_results
         ]
     )

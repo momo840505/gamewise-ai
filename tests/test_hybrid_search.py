@@ -725,3 +725,53 @@ def test_play_mode_score_is_displayed_when_requested(
         "Play-mode score:"
         in captured_output
     )
+
+def test_free_filter_requires_explicit_free_flag() -> None:
+    dataframe = pd.DataFrame(
+        {
+            "price_usd": [0.0, 0.0, 9.99],
+            "is_free": [False, True, False],
+            "positive_review_percentage": [90.0, 90.0, 90.0],
+            "release_year": [2024, 2024, 2024],
+            "platforms": ["Windows", "Windows", "Windows"],
+            "categories": ["Single-player"] * 3,
+        }
+    )
+
+    mask = apply_filters(
+        dataframe,
+        {"is_free": True},
+    )
+
+    assert mask.tolist() == [False, True, False]
+
+
+def test_removed_title_is_rejected() -> None:
+    embeddings = np.array(
+        [[1.0, 1.0], [2.0, 2.0]],
+        dtype=np.float32,
+    )
+
+    dataframe = pd.DataFrame(
+        {
+            "name": ["Removed", "Real Game"],
+        }
+    )
+
+    filtered_embeddings, filtered_dataframe = (
+        filter_invalid_game_names(
+            embeddings,
+            dataframe,
+        )
+    )
+
+    assert filtered_dataframe["name"].tolist() == [
+        "Real Game"
+    ]
+    assert np.array_equal(
+        filtered_embeddings,
+        np.array(
+            [[2.0, 2.0]],
+            dtype=np.float32,
+        ),
+    )

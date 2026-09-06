@@ -8,6 +8,14 @@
       "survival",
       "open world survival craft",
       "survival horror"
+    ],
+    "expected_filters": {
+      "maximum_price": 20.0,
+      "minimum_review_percentage": 80.0,
+      "play_mode": "co-op"
+    },
+    "expected_concepts": [
+      "survival"
     ]
   },
   {
@@ -20,6 +28,14 @@
       "cozy",
       "wholesome",
       "casual"
+    ],
+    "expected_filters": {
+      "maximum_price": 15.0,
+      "play_mode": "single-player"
+    },
+    "expected_concepts": [
+      "relaxing",
+      "casual"
     ]
   },
   {
@@ -29,6 +45,13 @@
     "expected_behavior": "results",
     "relevance_terms": [
       "psychological horror"
+    ],
+    "expected_filters": {
+      "is_free": true
+    },
+    "expected_concepts": [
+      "psychological horror",
+      "horror"
     ]
   },
   {
@@ -39,6 +62,15 @@
     "relevance_terms": [
       "turn-based strategy",
       "turn-based tactics",
+      "tactical",
+      "strategy"
+    ],
+    "expected_filters": {
+      "maximum_price": 20.0,
+      "platform": "Linux"
+    },
+    "expected_concepts": [
+      "turn-based",
       "tactical",
       "strategy"
     ]
@@ -53,6 +85,14 @@
       "action-adventure",
       "exploration",
       "co-op campaign"
+    ],
+    "expected_filters": {
+      "maximum_price": 25.0,
+      "release_year_after": 2020,
+      "play_mode": "co-op"
+    },
+    "expected_concepts": [
+      "adventure"
     ]
   },
   {
@@ -67,6 +107,13 @@
       "role-playing",
       "jrpg",
       "action rpg"
+    ],
+    "expected_filters": {
+      "minimum_review_percentage": 90.0
+    },
+    "expected_concepts": [
+      "story rich",
+      "rpg"
     ]
   },
   {
@@ -78,6 +125,13 @@
       "racing",
       "driving",
       "automobile sim"
+    ],
+    "expected_filters": {
+      "maximum_price": 15.0,
+      "platform": "Windows"
+    },
+    "expected_concepts": [
+      "racing"
     ]
   },
   {
@@ -90,6 +144,13 @@
       "farming sim",
       "agriculture",
       "life sim"
+    ],
+    "expected_filters": {
+      "platform": "Mac"
+    },
+    "expected_concepts": [
+      "farming",
+      "simulation"
     ]
   },
   {
@@ -102,6 +163,13 @@
       "fps",
       "first-person shooter",
       "third-person shooter"
+    ],
+    "expected_filters": {
+      "release_year_after": 2022,
+      "play_mode": "multiplayer"
+    },
+    "expected_concepts": [
+      "shooter"
     ]
   },
   {
@@ -109,14 +177,26 @@
     "query": "a game under $20",
     "top_k": 5,
     "expected_behavior": "clarification",
-    "relevance_terms": []
+    "relevance_terms": [],
+    "expected_filters": {
+      "maximum_price": 20.0
+    },
+    "expected_concepts": []
   },
   {
     "case_id": "impossible_conditions",
     "query": "a free co-op game for Mac with at least 99% positive reviews released after 2025",
     "top_k": 5,
     "expected_behavior": "no_results",
-    "relevance_terms": []
+    "relevance_terms": [],
+    "expected_filters": {
+      "minimum_review_percentage": 99.0,
+      "release_year_after": 2025,
+      "is_free": true,
+      "platform": "Mac",
+      "play_mode": "co-op"
+    },
+    "expected_concepts": []
   },
   {
     "case_id": "zh_coop_survival",
@@ -127,6 +207,14 @@
       "survival",
       "open world survival craft",
       "survival horror"
+    ],
+    "expected_filters": {
+      "maximum_price": 20.0,
+      "minimum_review_percentage": 80.0,
+      "play_mode": "co-op"
+    },
+    "expected_concepts": [
+      "survival"
     ]
   },
   {
@@ -139,6 +227,13 @@
       "farming sim",
       "agriculture",
       "life sim"
+    ],
+    "expected_filters": {
+      "platform": "Mac"
+    },
+    "expected_concepts": [
+      "farming",
+      "simulation"
     ]
   },
   {
@@ -146,6 +241,10 @@
     "query": "推薦 20 美元以下的遊戲",
     "top_k": 5,
     "expected_behavior": "clarification",
-    "relevance_terms": []
+    "relevance_terms": [],
+    "expected_filters": {
+      "maximum_price": 20.0
+    },
+    "expected_concepts": []
   }
 ]

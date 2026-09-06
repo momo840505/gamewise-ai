@@ -777,14 +777,8 @@ def format_price(
         errors="coerce",
     )
 
-    if (
-        is_free_value(
-            row.get("is_free")
-        )
-        or (
-            not pd.isna(price)
-            and float(price) == 0
-        )
+    if is_free_value(
+        row.get("is_free")
     ):
         return "Free"
 
@@ -1685,6 +1679,7 @@ def display_game_card(
     filters: dict[str, object],
     requested_concepts: list[str],
     developer_mode: bool,
+    best_match_order: bool,
 ) -> None:
     """Display one recommendation card."""
 
@@ -1711,7 +1706,10 @@ def display_game_card(
     ):
         st.caption(
             "🏆 Best overall match"
-            if result_number == 1
+            if (
+                result_number == 1
+                and best_match_order
+            )
             else f"Recommendation {result_number}"
         )
 
@@ -2039,6 +2037,9 @@ def main() -> None:
             filters=extracted_filters,
             requested_concepts=requested_concepts,
             developer_mode=developer_mode,
+            best_match_order=(
+                sort_option == "Best match"
+            ),
         )
 
     display_footer()

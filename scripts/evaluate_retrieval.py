@@ -42,6 +42,9 @@ INVALID_GAME_NAMES = {
     "unknown",
     "unknown game",
     "unknown title",
+    "removed",
+    "delisted",
+    "unavailable",
 }
 
 
@@ -371,6 +374,29 @@ def is_concept_relevant(
     )
 
 
+def expected_interpretation_passed(
+    expected_filters: dict[str, object],
+    expected_concepts: list[str],
+    extracted_filters: dict[str, object],
+    requested_concepts: list[str],
+) -> tuple[bool, list[str]]:
+    errors: list[str] = []
+
+    if extracted_filters != expected_filters:
+        errors.append(
+            "filters differ from expected values"
+        )
+
+    if set(requested_concepts) != set(
+        expected_concepts
+    ):
+        errors.append(
+            "concepts differ from expected values"
+        )
+
+    return (not errors, errors)
+
+
 def expected_behavior_passed(
     expected_behavior: str,
     search_results: pd.DataFrame,
@@ -431,6 +457,20 @@ def evaluate_case(
         )
     )
 
+    expected_filters = dict(
+        evaluation_case.get(
+            "expected_filters",
+            {},
+        )
+    )
+
+    expected_concepts = list(
+        evaluation_case.get(
+            "expected_concepts",
+            [],
+        )
+    )
+
     start_time = time.perf_counter()
 
     (
@@ -447,6 +487,16 @@ def evaluate_case(
     latency_seconds = (
         time.perf_counter()
         - start_time
+    )
+
+    (
+        interpretation_passed,
+        interpretation_errors,
+    ) = expected_interpretation_passed(
+        expected_filters=expected_filters,
+        expected_concepts=expected_concepts,
+        extracted_filters=extracted_filters,
+        requested_concepts=requested_concepts,
     )
 
     behavior_passed = (
@@ -568,6 +618,11 @@ def evaluate_case(
 
     notes: list[str] = []
 
+    if not interpretation_passed:
+        notes.extend(
+            interpretation_errors
+        )
+
     if not behavior_passed:
         notes.append(
             "unexpected search behavior"
@@ -597,6 +652,9 @@ def evaluate_case(
         "query": query,
         "expected_behavior": (
             expected_behavior
+        ),
+        "interpretation_passed": (
+            interpretation_passed
         ),
         "behavior_passed": (
             behavior_passed
@@ -638,9 +696,16 @@ def evaluate_case(
         "latency_seconds": (
             latency_seconds
         ),
+        "expected_filters": json.dumps(
+            expected_filters,
+            ensure_ascii=False,
+        ),
         "extracted_filters": json.dumps(
             extracted_filters,
             ensure_ascii=False,
+        ),
+        "expected_concepts": ", ".join(
+            expected_concepts
         ),
         "requested_concepts": ", ".join(
             requested_concepts
@@ -672,6 +737,12 @@ def write_summary(
 
     total_cases = len(
         results_dataframe
+    )
+
+    interpretation_passed_count = int(
+        results_dataframe[
+            "interpretation_passed"
+        ].sum()
     )
 
     behavior_passed_count = int(
@@ -733,6 +804,11 @@ def write_summary(
         "",
         "## Overall results",
         "",
+        (
+            "- Query interpretation pass rate: "
+            f"{interpretation_passed_count}/{total_cases} "
+            f"({interpretation_passed_count / total_cases:.2%})"
+        ),
         (
             "- Search behavior pass rate: "
             f"{behavior_passed_count}/{total_cases} "
@@ -800,6 +876,10 @@ def write_summary(
                 "",
                 (
                     f"- Query: `{row['query']}`"
+                ),
+                (
+                    "- Interpretation passed: "
+                    f"{row['interpretation_passed']}"
                 ),
                 (
                     "- Behavior passed: "
@@ -907,6 +987,23 @@ def main() -> None:
         "Markdown summary: "
         f"{EVALUATION_SUMMARY_PATH}"
     )
+
+    failed_rows = results_dataframe[
+        (~results_dataframe["interpretation_passed"])
+        | (~results_dataframe["behavior_passed"])
+        | (results_dataframe["hard_filter_accuracy"] < 1.0)
+        | (results_dataframe["valid_title_rate"] < 1.0)
+        | (results_dataframe["duplicate_free_rate"] < 1.0)
+    ]
+
+    if not failed_rows.empty:
+        failed_ids = ", ".join(
+            failed_rows["case_id"].astype(str)
+        )
+        raise SystemExit(
+            "Retrieval evaluation failed: "
+            + failed_ids
+        )
 
 
 if __name__ == "__main__":

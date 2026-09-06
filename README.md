@@ -1,917 +1,207 @@
 <div align="center">
 
-# 🎮 GameWise AI
+# GameWise AI
 
-### Explainable Steam Game Recommendations from Natural-Language Queries
+### Explainable Steam game recommendations from natural-language queries
 
-Describe the kind of game you want in everyday language.  
-GameWise understands your budget, platform, review requirements, release year, play mode, genre, and preferred game style before returning grounded recommendations.
-
-<br>
-
-![Python](https://img.shields.io/badge/Python-3.13-3776AB?logo=python&logoColor=white)
-![Streamlit](https://img.shields.io/badge/Streamlit-Interactive%20Application-FF4B4B?logo=streamlit&logoColor=white)
-![Sentence Transformers](https://img.shields.io/badge/Embeddings-all--MiniLM--L6--v2-6F52ED)
-![Tests](https://img.shields.io/badge/tests-25%20passed-2EA44F)
-![Evaluation](https://img.shields.io/badge/evaluation-14%2F14%20passed-2EA44F)
-
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-Open%20GameWise-FF4B4B?logo=streamlit&logoColor=white)](https://gamewise-ai.streamlit.app)
-<br>
-
-[Overview](#-overview) •
-[Features](#-key-features) •
-[Architecture](#️-system-architecture) •
-[Evaluation](#-evaluation) •
-[Installation](#️-installation) •
-[Project Structure](#-project-structure)
+[Live Demo](https://gamewise-ai.streamlit.app)
 
 </div>
 
 ---
 
-## A Couple of Deeper Writeups
+## Overview
 
-I wrote two extra docs that go into more depth than makes sense to cram into this README:
-
-- [Retrieval evaluation](docs/retrieval_evaluation.md) -- what the evaluation suite actually checks and where I'd take it next
-- [Traditional Chinese query support](docs/traditional_chinese_extension.md) -- why I added it and how it actually works under the hood
-
----
-
-## 🌐 Live Demo
-
-Try GameWise AI directly in your browser:
-
-### [🎮 Open GameWise AI](https://gamewise-ai.streamlit.app)
-
-No local installation is required. Enter a natural-language game request to explore recommendations, clarification handling, shortlist features, and developer ranking details.
-
-> The first semantic search may take longer while the embedding model is loaded.
-
----
-
-## 📸 Application Preview
-
-![GameWise AI recommendation results](docs/images/recommendations.png)
-
-> GameWise converts a natural-language request into structured constraints, filters unsuitable games, ranks the remaining candidates, and explains why each recommendation matches.
-
-![GameWise AI individual recommendation with match reasoning](docs/images/recommended_games.png)
-
-> Each recommendation shows a "why it fits" breakdown covering budget, play-mode, and genre/tag matches.
-
----
-
-## ✨ Overview
-
-I built this because Steam's own search kept losing half of what I actually wanted. I'd have three or four things in my head at once — budget, review score, whether it's co-op, roughly what genre — and typing all of that into the search bar either got ignored or watered down into a generic keyword match.
-
-So the goal for GameWise was: take the whole sentence, keep every constraint I actually stated, and don't quietly drop any of them just because the semantic match "felt close enough."
-
-For example, if I type:
-
-> A cooperative survival game under $20 with at least 80% positive reviews.
-
-that's really four separate requirements at once:
-
-- The game must cost no more than `$20`
-- The game must have at least `80%` positive reviews
-- The game must officially support `co-op`
-- The game should strongly relate to the `survival` concept
-
-A plain keyword search tends to catch one or two of those and lose the rest. GameWise processes the complete query using:
-
-1. Natural-language query interpretation
-2. Structured hard filtering
-3. Sentence Transformer semantic retrieval
-4. Field-aware concept scoring
-5. Official play-mode validation
-6. Review-quality scoring
-7. Explainable hybrid ranking
-8. Optional grounded recommendation generation
-
----
-
-## 🎯 What I Was Aiming For
-
-Going in, I cared about a specific list of things:
-
-- Understand natural-language game requests
-- Preserve strict user requirements
-- Go beyond basic keyword matching
-- Provide transparent recommendation reasons
-- Avoid inventing unsupported game information
-- Handle broad and impossible requests safely
-- Provide a polished and interactive user experience
-- Remain usable without an external generation API
-
----
-
-## 🚀 Key Features
-
-| Feature | Description |
-|---|---|
-| 💬 Natural-language search | Users describe their ideal game without completing a long filter form |
-| 💰 Budget filtering | Detects maximum price constraints such as `under $20` |
-| ⭐ Review filtering | Supports minimum positive-review requirements |
-| 💻 Platform filtering | Supports Windows, Mac, and Linux requirements |
-| 📅 Release-year filtering | Supports queries using after, since, or before a year |
-| 🆓 Free-game filtering | Detects free and free-to-play requirements |
-| 🎮 Play-mode filtering | Uses official Steam categories for single-player, co-op, and multiplayer |
-| 🧠 Semantic retrieval | Uses Sentence Transformer embeddings to understand related meanings |
-| 🏷️ Concept matching | Matches genres, tags, categories, and descriptions using different evidence strengths |
-| 🔀 Hybrid ranking | Combines semantic, concept, play-mode, and review-quality signals |
-| 💡 Clarification handling | Broad requests ask for more information instead of returning random games |
-| 🔍 Strict no-result handling | Requirements are never silently removed or weakened |
-| ✨ Grounded summaries | Optional recommendation summaries use retrieved Steam records only |
-| 🧩 Local fallback | The application works even when no OpenAI API key is available |
-| 🕘 Search history | Recent searches appear immediately in the sidebar |
-| 💜 Shortlist | Users can save games during the active Streamlit session |
-| ↕️ Result sorting | Results can be sorted by match, reviews, price, or release year |
-| ⬇️ CSV export | Displayed recommendations can be downloaded |
-| 🛠️ Developer mode | Internal ranking details are available without cluttering the normal interface |
-
----
-
-## 🖼️ Interface States
-
-<table>
-  <tr>
-    <td width="50%" valign="top">
-      <strong>Home page</strong>
-      <br><br>
-      <img src="docs/images/home.png" alt="GameWise AI home page">
-    </td>
-    <td width="50%" valign="top">
-      <strong>Clarification handling</strong>
-      <br><br>
-      <img src="docs/images/clarification.png" alt="GameWise AI clarification handling">
-    </td>
-  </tr>
-  <tr>
-    <td width="50%" valign="top">
-      <strong>No-result handling</strong>
-      <br><br>
-      <img src="docs/images/no_results.png" alt="GameWise AI no-result handling">
-    </td>
-    <td width="50%" valign="top">
-      <strong>Developer ranking details</strong>
-      <br><br>
-      <img src="docs/images/developer_mode.png" alt="GameWise AI developer mode">
-    </td>
-  </tr>
-</table>
-
----
-
-## 🏗️ System Architecture
-
-```text
-┌─────────────────────────────────┐
-│ Natural-language user request   │
-└────────────────┬────────────────┘
-                 │
-                 ▼
-┌─────────────────────────────────┐
-│ Query interpretation            │
-│                                 │
-│ • Maximum price                 │
-│ • Minimum review percentage     │
-│ • Platform                      │
-│ • Release year                  │
-│ • Free status                   │
-│ • Play mode                     │
-│ • Requested concepts            │
-└────────────────┬────────────────┘
-                 │
-                 ▼
-┌─────────────────────────────────┐
-│ Structured hard filtering       │
-│                                 │
-│ Remove games that violate any   │
-│ explicit user requirement       │
-└────────────────┬────────────────┘
-                 │
-                 ▼
-┌─────────────────────────────────┐
-│ Candidate game collection       │
-└─────┬───────┬───────┬───────┬───┘
-      │       │       │       │
-      ▼       ▼       ▼       ▼
- Semantic  Concept  Play-mode Review
-similarity relevance preference quality
-      │       │       │       │
-      └───────┴───┬───┴───────┘
-                  │
-                  ▼
-┌─────────────────────────────────┐
-│ Hybrid ranking                  │
-└────────────────┬────────────────┘
-                 │
-                 ▼
-┌─────────────────────────────────┐
-│ Top-k grounded Steam records    │
-└────────────────┬────────────────┘
-                 │
-                 ▼
-┌─────────────────────────────────┐
-│ Recommendation explanation      │
-│                                 │
-│ • AI grounded summary           │
-│ • Local fallback summary        │
-│ • Per-game matching reasons     │
-└────────────────┬────────────────┘
-                 │
-                 ▼
-┌─────────────────────────────────┐
-│ Interactive Streamlit interface │
-└─────────────────────────────────┘
-```
-
----
-
-## 🔎 Retrieval Workflow
-
-### Step 1 — Interpret the user query
-
-Example query:
-
-```text
-a cooperative survival game under $20
-with at least 80% positive reviews
-```
-
-Detected information:
-
-```text
-Maximum price: $20
-Minimum positive reviews: 80%
-Play mode: co-op
-Requested concept: survival
-```
-
-The structured requirements are preserved throughout the retrieval process.
-
----
-
-### Step 2 — Apply hard filters
-
-Hard filters are mandatory conditions.
-
-A game is removed before ranking when it violates a requested condition.
-
-Examples include:
-
-- Price exceeds the user's maximum budget
-- Positive-review percentage is below the required threshold
-- The requested platform is unsupported
-- The release year does not satisfy the query
-- A free game was requested but the game is paid
-- Official Steam categories do not support the requested play mode
-
-This prevents a semantically similar game from being recommended when it breaks an explicit requirement.
-
----
-
-### Step 3 — Calculate semantic similarity
-
-GameWise uses the following embedding model:
-
-```text
-sentence-transformers/all-MiniLM-L6-v2
-```
-
-The model converts both game metadata and user queries into 384-dimensional vectors.
-
-Semantic retrieval helps connect related meanings even when the exact words are different.
+GameWise searches a local Steam metadata snapshot using a hybrid retrieval pipeline. Natural-language requests are converted into structured constraints and ranking signals before recommendations are returned.
 
 Example:
 
 ```text
-User query:
-a cozy game to play alone
-
-Related metadata:
-relaxing, wholesome, casual, single-player
+a cooperative survival game under $20 with at least 80% positive reviews
 ```
 
-The Sentence Transformer model and processed search data are cached so they are loaded only once during each Python process.
-
----
-
-### Step 4 — Calculate concept relevance
-
-GameWise treats metadata fields differently.
-
-| Metadata field | Evidence strength |
-|---|---:|
-| Genres | Strong |
-| Community tags | Strong |
-| Official Steam categories | Supporting |
-| Short description | Weak |
-
-This prevents incidental description wording from receiving the same score as explicit structured metadata.
-
-Example:
+The request is interpreted as:
 
 ```text
-Game A tag:
-Survival
-
-Game B description:
-Fight for survival in a realistic military battle
+maximum price: $20
+minimum positive reviews: 80%
+play mode: co-op
+concept: survival
 ```
 
-Game A receives stronger survival evidence because `Survival` appears as a formal tag.
+Hard constraints are applied before ranking. A game that violates an explicit requirement is not allowed back into the result set because of a high semantic score.
 
-Game B receives weaker evidence because the word only appears incidentally in its description.
+## Retrieval pipeline
 
-### Supported concept groups
+```text
+User query
+   |
+   v
+Query interpretation
+   |
+   +-- price
+   +-- review threshold
+   +-- platform
+   +-- release year
+   +-- free status
+   +-- play mode
+   +-- requested concepts
+   |
+   v
+Hard filtering
+   |
+   v
+Candidate set
+   |
+   +-- semantic similarity
+   +-- concept relevance
+   +-- play-mode preference
+   +-- review quality
+   |
+   v
+Hybrid ranking
+   |
+   v
+Top-k Steam records
+   |
+   v
+Grounded explanation
+```
 
-- Relaxing
-- Casual
-- Psychological horror
-- Survival
-- Open world
-- Turn-based
-- Tactical
-- Strategy
-- Adventure
-- Puzzle
-- Farming
-- Simulation
-- Story rich
-- RPG
-- Racing
-- Shooter
+## Features
 
----
+- Natural-language search
+- Price and review thresholds
+- Windows, Mac, and Linux filtering
+- Release-year filtering
+- Free-game filtering using the explicit dataset free flag
+- Official Steam category checks for single-player, co-op, and multiplayer
+- Sentence Transformer retrieval
+- Field-aware concept scoring
+- Hybrid ranking
+- Clarification for weak queries
+- Strict no-result handling
+- Optional grounded OpenAI summary
+- Local fallback summary
+- Search history and shortlist
+- Sorting and CSV export
+- Developer ranking details
+- Traditional Chinese query support
 
-### Step 5 — Validate play mode
+## Traditional Chinese support
 
-GameWise uses official Steam categories to validate:
+Traditional Chinese terms are expanded with English equivalents before structured parsing, concept detection, and semantic retrieval.
 
-- Single-player
-- Co-op
-- Multiplayer
-- PvP-related support
+Examples:
 
-This allows the ranking system to distinguish between:
+```text
+20 美元以下、80% 好評、支援 Mac、合作、生存遊戲
+```
 
-- A pure single-player experience
-- A game supporting both solo and multiplayer
-- A co-op game with strong PvP emphasis
+```text
+找一款支援 Mac 的農場模擬遊戲
+```
 
-Community tags are not used as the main source for official play-mode filtering.
+The parser is rule-assisted. It does not fully model negation, disjunction, arbitrary slang, or every possible Chinese phrasing.
 
----
+See [Traditional Chinese Query Support](docs/traditional_chinese_extension.md).
 
-### Step 6 — Add review quality
+## Ranking
 
-Positive-review percentage is converted into a normalized quality signal.
-
-This signal does not replace relevance.
-
-It helps prefer better-reviewed games when two candidates have similar semantic and concept relevance.
-
----
-
-## 🧮 Hybrid Ranking
-
-The final ranking formula changes according to the information contained in the query.
+The ranking weights depend on which signals are present in the query.
 
 ### Concept and play-mode query
 
 ```text
-Hybrid score =
-0.55 × normalized semantic similarity
-+ 0.20 × concept relevance
-+ 0.15 × play-mode preference
-+ 0.10 × review quality
+0.55 semantic
++ 0.20 concept
++ 0.15 play mode
++ 0.10 review quality
 ```
 
 ### Concept-only query
 
 ```text
-Hybrid score =
-0.65 × normalized semantic similarity
-+ 0.25 × concept relevance
-+ 0.10 × review quality
+0.65 semantic
++ 0.25 concept
++ 0.10 review quality
 ```
 
 ### Play-mode-only query
 
 ```text
-Hybrid score =
-0.70 × normalized semantic similarity
-+ 0.20 × play-mode preference
-+ 0.10 × review quality
+0.70 semantic
++ 0.20 play mode
++ 0.10 review quality
 ```
 
-### Other sufficiently specific queries
+### Other specific queries
 
 ```text
-Hybrid score =
-0.90 × normalized semantic similarity
-+ 0.10 × review quality
+0.90 semantic
++ 0.10 review quality
 ```
 
-The normal interface converts internal ranking values into human-readable labels:
+These weights are heuristic. They have not been learned from human relevance labels.
 
-- Excellent match
-- Strong match
-- Good match
-- Partial match
+## Evaluation
 
-Raw values remain available through Developer mode.
+The repository contains 14 retrieval evaluation scenarios and 30 automated tests.
 
----
+The evaluation checks:
 
-## 💡 Query Safety and User Guidance
+- expected filter extraction;
+- expected concept detection;
+- recommendation, clarification, and no-result behavior;
+- hard-filter compliance;
+- valid titles;
+- duplicate-free results;
+- simple metadata relevance in the first five results.
 
-### Broad-query clarification
+A failed interpretation or retrieval check exits with a non-zero status, so CI fails on regression.
 
-A broad query such as:
+The current suite is a correctness check, not a full ranking-quality benchmark. There is no human-labeled relevance set yet, so nDCG, MRR, precision@k, and recall@k are not reported.
 
-```text
-a game under $20
-```
+See [Retrieval Evaluation](docs/retrieval_evaluation.md).
 
-may match hundreds of games.
+## Dataset
 
-Instead of returning arbitrary results, GameWise asks the user to provide more information, such as:
+The repository contains a 1,495-game Steam metadata snapshot.
 
-- Genre
-- Mood
-- Play mode
-- Platform
-- Review requirement
+Available fields include:
 
----
-
-### Strict no-result handling
-
-An impossible query such as:
-
-```text
-a free co-op game for Mac
-with at least 99% positive reviews
-released after 2025
-```
-
-returns a clear no-result message.
-
-GameWise does not silently:
-
-- Increase the budget
-- Lower the review requirement
-- Remove the platform requirement
-- Ignore the release-year condition
-- Replace co-op with multiplayer
-
-This keeps the recommendation behaviour transparent.
-
----
-
-## 🛡️ Grounded Recommendation Generation
-
-After retrieval, GameWise can generate a recommendation summary using only the returned Steam records.
-
-The generation layer is instructed not to invent:
-
-- Prices
-- Review percentages
-- Review counts
-- Platforms
-- Release years
-- Steam URLs
-- Unsupported genres
-- Unsupported gameplay features
-
-### Generation modes
-
-| Mode | Behaviour |
-|---|---|
-| AI-generated grounded summary | Uses the configured model with retrieved Steam records |
-| Local grounded summary | Used when no API key is available |
-| Local fallback after error | Used when an external generation request fails |
-
-The retrieval system remains fully functional without an OpenAI API key.
-
----
-
-## 📊 Evaluation
-
-### Evaluation coverage
-
-The retrieval pipeline was evaluated using 14 representative scenarios:
-
-1. Cooperative survival
-2. Relaxing single-player
-3. Free psychological horror
-4. Linux tactical strategy
-5. Recent co-op adventure
-6. Story-rich RPG
-7. Windows racing
-8. Mac farming simulation
-9. Recent multiplayer shooter
-10. Broad-query clarification
-11. Impossible-condition handling
-12. Traditional Chinese cooperative survival
-13. Traditional Chinese Mac farming simulation
-14. Traditional Chinese broad-query clarification
-
-### Current evaluation results
-
-| Metric | Result |
-|---|---:|
-| Expected search behaviour | **14 / 14 passed** |
-| Hard-filter accuracy | **100%** |
-| Valid-title rate | **100%** |
-| Duplicate-free rate | **100%** |
-| Metadata-term relevance@5 | **100%** |
-| Automated tests | **27 passed** |
-
-### What these metrics don't measure
-
-All five metrics above check that the pipeline behaves *correctly and safely* — valid, filter-satisfying, non-duplicate results, or the right fallback (clarification / no-result) for the case. None of them grade whether the ranking *order* within a result set is actually good; that would need a metric like nDCG or MRR against human-labeled relevance judgements, which don't exist for this dataset. The closest thing to that today is a handful of unit tests that assert specific ordering claims directly (for example `test_play_mode_score_fixes_original_ranking_problem`), which is real but narrower than an aggregate ranking-quality score.
-
-### Metric definitions
-
-#### Expected search behaviour
-
-Checks whether every evaluation case correctly:
-
-- Returns recommendations
-- Requests clarification
-- Reports no matching results
-
-#### Hard-filter accuracy
-
-Measures whether every returned game satisfies every extracted structured constraint.
-
-#### Valid-title rate
-
-Checks that results do not contain:
-
-- Blank names
-- Missing values
-- `Unknown`
-- `Not available`
-- Invalid placeholder titles
-
-#### Duplicate-free rate
-
-Checks that the same game title does not appear more than once in a single recommendation set.
-
-#### Metadata-term relevance@5
-
-Checks whether each top-five recommendation contains at least one separately defined relevance term in its genres, tags, or description.
-
-> The evaluation results apply to the current 14 test cases and the selected 1,495-game dataset. They do not represent universal accuracy across the complete Steam catalogue or every possible user query.
-
-### Evaluation files
-
-```text
-evaluation/evaluation_cases.json
-evaluation/evaluation_results.csv
-evaluation/evaluation_summary.md
-```
-
----
-
-## 🧪 Automated Testing
-
-The project currently contains 27 automated tests.
-
-The tests cover:
-
-- Price extraction
-- Review-percentage extraction
-- Platform filtering, including a regression test that platform keywords
-  only match whole words (`test_platform_filter_ignores_substrings`) --
-  added after a real bug where `"win"` matched inside ordinary words
-  like "twin" or "winning" and silently added an unrequested
-  `platform: Windows` filter
-- Release-year filtering
-- Official co-op filtering
-- Play-mode detection ignoring known ambiguous substrings
-  (`test_play_mode_ignores_known_ambiguous_substrings`) -- added after a
-  real bug where the English word `"coop"` (as in "chicken coop") and
-  the Chinese multiplayer keyword `"多人"` (as the tail of `"很多人"`,
-  "a lot of people") silently added an unrequested `play_mode` filter
-- Play-mode detection ignoring generic Chinese cooperation words
-  (`test_play_mode_ignores_generic_cooperation_words`) -- the same class
-  of bug one level up: `"合作"` ("cooperate") and `"跟朋友"`/`"和朋友"`
-  ("with a friend") are ordinary words with no gameplay meaning on
-  their own, e.g. a game announcing a brand tie-in
-- Concept detection ignoring the generic "choose" verb
-  (`test_detect_requested_concepts_ignores_generic_choose_verb`) --
-  `"選擇"` mapped to the "choices matter" concept, but it is mostly just
-  the verb "to choose" in a request like "help me choose a game"
-- Clarification behaviour
-- Invalid game-name filtering
-- Embedding and metadata alignment
-- Concept-scoring differences
-- Description-only weak evidence
-- Play-mode preference scoring
-- Grounded generation fallback
-- Empty-result generation behaviour
-
-Run all tests:
-
-```powershell
-python -m pytest -q
-```
-
-Expected result:
-
-```text
-...........................
-27 passed
-```
-
----
-
-## 🗂️ Dataset
-
-The project uses a local dataset containing 1,495 Steam games.
-
-### Available metadata
-
-- Game name
-- Price
-- Free-to-play status
-- Release year
-- Positive review count
-- Negative review count
-- Positive-review percentage
-- Genres
-- Official Steam categories
-- Community tags
-- Supported platforms
-- Short description
+- app ID
+- name
+- price
+- free status
+- release year
+- positive and negative review counts
+- genres
+- Steam categories
+- community tags
+- supported platforms
+- short description
 - Steam store URL
 
-### Data-cleaning outputs
+### Data provenance
 
-```text
-data/processed/steam_games_cleaned.csv
-data/processed/data_quality_report.json
-```
+The original collection source and collection date are not recorded in the repository history. This project does not claim a source that cannot be verified.
 
-### Embedding outputs
+The snapshot is kept for reproducible portfolio evaluation. Prices, availability, and store metadata can become stale and should not be treated as live Steam data.
 
-```text
-data/processed/game_embeddings.npy
-data/processed/game_embedding_index.csv
-```
+The cleaning pipeline also records price/free inconsistencies instead of assuming every zero-price record is a free-to-play game.
 
-### Data-quality safeguards
-
-The pipeline:
-
-- Removes invalid game names
-- Removes duplicate titles
-- Preserves embedding-to-row alignment
-- Safely converts numeric values
-- Handles missing optional metadata
-- Keeps hard filtering separate from ranking
-- Prevents invalid results from reaching the UI
-
----
-
-## 🧰 Technology Stack
-
-| Area | Technology |
-|---|---|
-| Programming language | Python 3.13 |
-| Web interface | Streamlit |
-| Data processing | pandas and NumPy |
-| Semantic embeddings | Sentence Transformers |
-| Embedding model | all-MiniLM-L6-v2 |
-| Machine-learning runtime | PyTorch |
-| Testing | pytest |
-| Optional generation | OpenAI API |
-| Environment variables | python-dotenv |
-| Version control | Git and GitHub |
-
----
-
-## ⚙️ Installation
-
-### Prerequisites
-
-Install:
-
-- Python
-- Git
-- Windows PowerShell, Terminal, or another command-line tool
-
----
-
-### 1. Clone the repository
-
-```powershell
-git clone https://github.com/momo840505/gamewise-ai.git
-cd gamewise-ai
-```
-
----
-
-### 2. Create a virtual environment
-
-```powershell
-python -m venv .venv
-```
-
----
-
-### 3. Activate the environment
-
-#### Windows PowerShell
-
-```powershell
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-.\.venv\Scripts\Activate.ps1
-```
-
-#### macOS or Linux
-
-```bash
-source .venv/bin/activate
-```
-
----
-
-### 4. Upgrade pip
-
-```powershell
-python -m pip install --upgrade pip
-```
-
----
-
-### 5. Install project dependencies
-
-```powershell
-python -m pip install -r requirements.txt
-```
-
----
-
-### 6. Configure optional grounded generation
-
-Copy the environment example:
-
-```powershell
-Copy-Item .env.example .env
-```
-
-Add local values to `.env`:
-
-```text
-OPENAI_API_KEY=
-OPENAI_MODEL=
-```
-
-Important:
-
-- Never commit `.env`
-- Never publish a real API key
-- The application works without an API key
-- Without a key, GameWise uses its local grounded-summary fallback
-
----
-
-## ▶️ Run the Application
-
-From the project root:
-
-```powershell
-python -m streamlit run .\app.py
-```
-
-Open:
-
-```text
-http://localhost:8501
-```
-
-The first semantic query may be slower because the embedding model must be loaded.
-
-Later searches reuse the cached model.
-
----
-
-## 📈 Run the Evaluation
-
-Run the evaluation as a Python module:
-
-```powershell
-python -m scripts.evaluate_retrieval
-```
-
-Do not run:
-
-```text
-python scripts/evaluate_retrieval.py
-```
-
-Using module mode ensures that imports such as `scripts.search` are resolved correctly.
-
-The evaluation produces:
-
-```text
-evaluation/evaluation_results.csv
-evaluation/evaluation_summary.md
-```
-
----
-
-## 🧪 Example Queries
-
-### Cooperative survival
-
-```text
-a cooperative survival game under $20
-with at least 80% positive reviews
-```
-
-### Relaxing single-player
-
-```text
-a relaxing single-player casual game under $15
-```
-
-### Free psychological horror
-
-```text
-a free psychological horror game
-```
-
-### Tactical strategy for Linux
-
-```text
-a turn-based tactical strategy game under $20 for Linux
-```
-
-### Story-rich RPG
-
-```text
-a story-rich RPG with at least 90% positive reviews
-```
-
-### Broad query
-
-```text
-a game under $20
-```
-
-### Impossible query
-
-```text
-a free co-op game for Mac
-with at least 99% positive reviews
-released after 2025
-```
-
----
-
-## 📁 Project Structure
+## Project structure
 
 ```text
 gamewise-ai/
-│
 ├── app.py
-├── README.md
 ├── requirements.txt
-├── .env.example
-│
 ├── data/
 │   ├── raw/
-│   │   └── steam_top_games_2026.csv
-│   │
 │   └── processed/
-│       ├── steam_games_cleaned.csv  # generated by clean_dataset.py
-│       ├── data_quality_report.json  # generated by clean_dataset.py
-│       ├── game_embeddings.npy
-│       └── game_embedding_index.csv
-│
 ├── docs/
-│   └── images/
-│       ├── home.png
-│       ├── recommendations.png
-│       ├── clarification.png
-│       ├── no_results.png
-│       ├── developer_mode.png
-│       └── recommended_games.png
-│
 ├── evaluation/
-│   ├── evaluation_cases.json
-│   ├── evaluation_results.csv
-│   └── evaluation_summary.md
-│
 ├── scripts/
 │   ├── build_embeddings.py
 │   ├── clean_dataset.py
@@ -924,148 +214,86 @@ gamewise-ai/
 │   ├── search.py
 │   ├── semantic_search.py
 │   └── text_utils.py
-│
 ├── tests/
-│   ├── test_generate_answer.py
-│   └── test_hybrid_search.py
-│
-├── .streamlit/
-│   └── config.toml
-│
-├── .github/
-│   └── workflows/
-│       └── tests.yml
-│
-└── LICENSE
+├── .github/workflows/tests.yml
+└── .streamlit/config.toml
 ```
 
----
+## Setup
 
-## 🧭 Design Decisions (and why I made them)
+```powershell
+git clone https://github.com/momo840505/gamewise-ai.git
+cd gamewise-ai
 
-### Hard filters win, no matter how good the semantic match looks
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
 
-Early on I let semantic similarity have too much influence, and it would occasionally surface a great-looking game that quietly broke a requirement (over budget, wrong platform). That felt worse than returning fewer results, so now explicit requirements are treated as mandatory -- a high semantic score can never override:
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
 
-- Price
-- Review threshold
-- Platform
-- Release year
-- Free requirement
-- Official play mode
+Optional generation:
 
----
-
-### Play mode is checked against Steam's own categories, not community tags
-
-Community tags are crowd-sourced and noisy -- I saw plenty of single-player games tagged "Multiplayer" by mistake. So single-player, co-op, multiplayer, and PvP support are verified using Steam's official categories instead, and tags are only used as a secondary signal.
-
----
-
-### Description text only counts as weak evidence
-
-A word showing up once in a game's description shouldn't score the same as it showing up as an actual genre or tag -- otherwise a survival horror game that mentions "puzzle elements" in passing starts competing with an actual puzzle game.
-
----
-
-### If nothing matches, GameWise says so instead of quietly loosening the query
-
-I'd rather show "no result" than silently drop the review-score requirement or swap co-op for multiplayer just to have something to display. That kind of silent substitution is exactly the sort of thing that erodes trust in a recommender.
-
----
-
-### Explainability isn't an afterthought
-
-Every recommendation shows why it matched, and Developer mode exposes the raw numbers behind that decision for anyone who wants to dig in:
-
-- Hybrid score
-- Semantic score
-- Concept score
-- Play-mode score
-- Official Steam categories
-
----
-
-### The embedding model and search data load once per process
-
-Loading the Sentence Transformer model is the slow part, so it's cached and only paid for once instead of on every search.
-
----
-
-## 📝 Notes From Building This
-
-A few things worth being upfront about, since they came up while actually building and reviewing this project rather than being planned from the start:
-
-**The same bug kept reappearing in slightly different clothes.** The platform filter, the free-game filter, and the play-mode filter all independently had the same underlying problem: Python's `re` module treats CJK characters as word characters, so a plain `\b` boundary silently fails right at the point where an English keyword touches Chinese text with no space (`支援Mac`, `限定free方案`). I fixed it three separate times before I noticed it was the same bug each time, which is itself a useful lesson -- a targeted patch in one place doesn't protect the next place the same pattern shows up. There's a related but genuinely different flavor of the same problem in play-mode detection: "coop" is also the English word for a chicken enclosure, and "多人" (multiplayer) is also just the tail end of "很多人" (a lot of people). Those aren't boundary bugs, they're real ambiguity in natural language, so I excluded the specific known collisions rather than pretending there's a clean general fix. The same ambiguity showed up again, one level up, with the Traditional Chinese dictionary entries for "合作" ("cooperate") and "跟朋友"/"和朋友" ("with a friend") -- both are just ordinary words in Chinese, not gameplay signals, so "和知名動畫合作推出" ("released in collaboration with a well-known anime") was silently turning into a co-op filter. I ended up removing those bare entries rather than trying to list every non-gameplay use of "合作" -- the more specific phrases already in the dictionary (可以合作, 合作遊玩, 一起玩...) cover the genuine cases without the false positives.
-
-**`scripts/hybrid_search.py` used to be one 2,600+ line file** covering query parsing, ranking, data loading, and CLI formatting all at once. It worked, but it wasn't something I'd want to hand a reviewer and say "start here." It's now split into `text_utils.py`, `query_filters.py`, `ranking.py`, `search.py`, and `formatting.py`, each with one job.
-
-**The evaluation metrics measure correctness, not ranking quality.** See the note in the [Evaluation](#-evaluation) section -- I'd rather say that plainly than let a 100% badge imply more than it actually proves.
-
----
-
-## ⚠️ Limitations
-
-- The dataset contains 1,495 selected Steam games rather than the complete Steam catalogue.
-- Prices and availability reflect a dataset snapshot rather than live Steam information.
-- Steam community tags may contain noisy or unexpected labels.
-- Concept groups and term weights are manually defined.
-- The system does not learn from personal gameplay history.
-- Evaluation currently uses a limited predefined query collection.
-- Metadata-term relevance is not a replacement for human relevance assessment.
-- The first semantic search may take longer while the model loads.
-- Search history and shortlist data currently exist only during the active Streamlit session.
-- Traditional Chinese query support is a curated keyword dictionary (230+ terms) rather than full free-form Chinese language understanding, so unusual phrasing, Simplified-only slang, or dialectal variants may not be recognized.
-- A small number of keywords are inherently ambiguous in natural language (for example "coop" as in "chicken coop", "多人" inside "很多人"/"a lot of people", or "合作"/"跟朋友" used outside any gameplay context). The known collisions are excluded, but this is a targeted mitigation, not a general solution.
-
----
-
-## 🛣️ Development Roadmap
-
-### Completed
-
-- [x] Clean and validate the Steam dataset
-- [x] Generate local game embeddings
-- [x] Implement semantic retrieval
-- [x] Add structured hard filters
-- [x] Add field-aware concept scoring
-- [x] Add official play-mode scoring
-- [x] Add review-quality ranking
-- [x] Add grounded recommendation summaries
-- [x] Add local generation fallback
-- [x] Add automated tests
-- [x] Add formal retrieval evaluation
-- [x] Build an interactive Streamlit interface
-- [x] Add search history and shortlist
-- [x] Add sorting and CSV export
-- [x] Add Developer mode
-- [x] Deploy the public Streamlit application
-- [x] Add Traditional Chinese query support
-
-### Planned
-
-- [ ] Retrieve live Steam prices and availability
-- [ ] Extend query support to additional languages beyond Traditional Chinese
-- [ ] Add persistent user profiles
-- [ ] Add persistent saved-game lists
-- [ ] Add collaborative-filtering signals
-- [ ] Add user feedback collection
-- [ ] Expand evaluation with human relevance judgements
-- [ ] Add side-by-side game comparison
-- [ ] Add recommendation diversity controls
-
----
-
-GitHub repository:
+```powershell
+Copy-Item .env.example .env
+```
 
 ```text
-https://github.com/momo840505/gamewise-ai
+OPENAI_API_KEY=
+OPENAI_MODEL=
 ```
 
----
+The retrieval system works without an API key.
 
-<div align="center">
+## Run
 
-Built with Python, Sentence Transformers, and Streamlit.
+```powershell
+python -m streamlit run .\app.py
+```
 
-</div>
+## Tests
+
+```powershell
+python -m pytest -q
+```
+
+Expected:
+
+```text
+30 passed
+```
+
+## Retrieval evaluation
+
+```powershell
+python -m scripts.evaluate_retrieval
+```
+
+## CI
+
+GitHub Actions runs:
+
+```text
+pytest
+retrieval evaluation
+compileall
+```
+
+The workflow runs on pushes and pull requests to `main`.
+
+## Known limitations
+
+- The dataset is a fixed 1,495-game snapshot, not the full Steam catalogue.
+- Store prices and availability are not live.
+- Ranking weights are heuristic.
+- Review quality currently uses positive-review percentage without a Bayesian or Wilson adjustment.
+- Traditional Chinese support is rule-assisted.
+- Negation and OR-style constraints are not fully modeled.
+- Ranking quality has not yet been measured against human relevance judgments.
+- The first semantic query has model-loading overhead.
+- Search history and shortlist data are session-only.
+- The generated summary is context-constrained but does not yet use a structured factual validator.
+
+## License
+
+MIT
