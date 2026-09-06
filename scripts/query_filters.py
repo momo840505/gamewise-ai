@@ -466,11 +466,18 @@ def extract_filters(
         r"(?<!chicken)(?<!chicken )\bcoop\b",
         normalized_query,
     ) or re.search(
+        # Bare "合作"/"協作"/"協力" ("cooperate") and "跟朋友"/"和朋友"/
+        # "與朋友" ("with a friend") used to be in this alternation too,
+        # but those are ordinary Chinese words with no gameplay meaning
+        # on their own (e.g. "和知名動畫合作推出" -- "released in
+        # collaboration with a well-known anime" -- has nothing to do
+        # with co-op). Only the specific phrases that actually mean
+        # "play together" are matched here; see the matching note in
+        # text_utils.expand_traditional_chinese_query.
         r"(?:多人合作|多人协作|連線合作|联机合作|"
         r"連機合作|線上合作|线上合作|本地合作|"
-        r"可以合作|可合作|合作遊玩|合作游玩|"
-        r"合作|協作|协作|協力|协力|一起玩|"
-        r"一起打|朋友一起|跟朋友|和朋友|與朋友|与朋友|"
+        r"可以合作|可合作|合作遊玩|合作游玩|一起玩|"
+        r"一起打|朋友一起|"
         r"雙人|双人|兩人|两人)",
         query,
     ):

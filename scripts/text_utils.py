@@ -92,18 +92,9 @@ TRADITIONAL_CHINESE_QUERY_SYNONYMS: dict[str, str] = {
     "可合作": " co-op ",
     "合作遊玩": " co-op ",
     "合作游玩": " co-op ",
-    "協作": " co-op ",
-    "协作": " co-op ",
-    "合作": " co-op ",
-    "協力": " co-op ",
-    "协力": " co-op ",
     "一起玩": " co-op ",
     "一起打": " co-op ",
     "朋友一起": " co-op ",
-    "跟朋友": " co-op ",
-    "和朋友": " co-op ",
-    "與朋友": " co-op ",
-    "与朋友": " co-op ",
     "雙人": " co-op ",
     "双人": " co-op ",
     "兩人": " co-op ",
@@ -205,8 +196,6 @@ TRADITIONAL_CHINESE_QUERY_SYNONYMS: dict[str, str] = {
     "故事": " story rich ",
     "敘事": " story rich ",
     "叙事": " story rich ",
-    "選擇": " choices matter ",
-    "选择": " choices matter ",
     "多結局": " multiple endings ",
     "多结局": " multiple endings ",
     "角色扮演": " rpg ",
@@ -263,6 +252,21 @@ def expand_traditional_chinese_query(query: str) -> str:
     # query, which extract_filters then picked up as a real play-mode
     # request. "多人" is special-cased with a negative lookbehind for the
     # known "many people" prefixes instead of a bare containment check.
+    #
+    # The dictionary also used to have bare entries for "合作"/"協作"/
+    # "協力" ("cooperate"/"collaborate") and "跟朋友"/"和朋友"/"與朋友"
+    # ("with a friend"), which are ordinary Chinese words used constantly
+    # outside any game-mode context, e.g. "和知名動畫合作推出" ("released
+    # in collaboration with a well-known anime") or "跟朋友討論過這款遊戲"
+    # ("discussed this game with a friend"). Both silently forced
+    # play_mode to co-op. Rather than chase every non-gameplay use of
+    # those words with more lookarounds, they were removed in favor of
+    # the more specific phrases already in this dictionary that actually
+    # mean "play together" (可以合作, 合作遊玩, 一起玩, 朋友一起, etc.).
+    # Same reasoning for "選擇" ("choose"), which mapped to "choices
+    # matter" but is mostly just the verb "to choose" in a request like
+    # "幫我選擇一款遊戲" ("help me choose a game") -- "多結局" ("multiple
+    # endings") already covers that concept without the ambiguity.
     expanded_terms = []
     for term, replacement in TRADITIONAL_CHINESE_QUERY_SYNONYMS.items():
         if term == "多人":

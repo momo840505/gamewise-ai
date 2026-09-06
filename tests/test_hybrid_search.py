@@ -207,6 +207,44 @@ def test_play_mode_ignores_known_ambiguous_substrings() -> None:
     assert extract_filters("多人遊戲")["play_mode"] == "multiplayer"
 
 
+def test_play_mode_ignores_generic_cooperation_words() -> None:
+    """
+    Same bug class again, one level up: "合作" ("cooperate"/"collaborate")
+    and "跟朋友"/"和朋友" ("with a friend") are ordinary Chinese words used
+    constantly outside any game-mode context -- a game announcing a brand
+    tie-in, or someone just mentioning they talked about a game with a
+    friend, says nothing about how the game is played.
+    """
+
+    assert "play_mode" not in extract_filters(
+        "這是一款和知名動畫合作推出的劇情遊戲"
+    )
+    assert "play_mode" not in extract_filters(
+        "我想知道這款遊戲好不好玩，跟朋友討論過覺得畫面不錯"
+    )
+
+    # Genuine co-op phrasing must still work correctly.
+    assert (
+        extract_filters("我想找可以合作、2020 年之後推出的生存遊戲")["play_mode"]
+        == "co-op"
+    )
+    assert (
+        extract_filters("支援Mac，跟朋友連線合作，2021年後")["play_mode"] == "co-op"
+    )
+
+
+def test_detect_requested_concepts_ignores_generic_choose_verb() -> None:
+    """
+    "選擇" ("to choose") used to map to the "choices matter" concept, but
+    it is mostly just the ordinary verb for picking something, as in
+    "help me choose a game" -- which is not a request for a
+    narrative-choice game. "多結局" ("multiple endings") already covers
+    that concept without the ambiguity.
+    """
+
+    assert detect_requested_concepts("請幫我選擇一款好玩的遊戲") == []
+
+
 def test_extract_filters_supports_traditional_chinese_query() -> None:
     """Traditional Chinese portfolio queries should map to structured filters."""
 
