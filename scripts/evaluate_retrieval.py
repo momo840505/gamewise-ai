@@ -8,7 +8,7 @@ from typing import Any
 
 import pandas as pd
 
-from scripts.hybrid_search import search_games
+from scripts.search import search_games
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]

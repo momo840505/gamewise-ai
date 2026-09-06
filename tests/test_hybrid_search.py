@@ -1,16 +1,18 @@
 import numpy as np
 import pandas as pd
 
-from scripts.hybrid_search import (
+from scripts.formatting import print_results
+from scripts.query_filters import (
     apply_filters,
+    extract_filters,
+    filter_invalid_game_names,
+    query_requires_clarification,
+)
+from scripts.ranking import (
     calculate_concept_scores,
     calculate_hybrid_scores,
     calculate_play_mode_preference_scores,
     detect_requested_concepts,
-    extract_filters,
-    filter_invalid_game_names,
-    print_results,
-    query_requires_clarification,
 )
 
 
@@ -187,7 +189,7 @@ def test_play_mode_ignores_known_ambiguous_substrings() -> None:
     """
     Regression test for the same class of bug as
     test_platform_filter_ignores_substrings, but for keyword ambiguity
-    rather than a missing \b boundary: "coop" is also the English word
+    rather than a missing \\b boundary: "coop" is also the English word
     for a chicken enclosure, and the Chinese multiplayer keyword "多人"
     is also the tail of "很多人" ("a lot of people"). Neither query below
     is asking for a play mode, so play_mode must not be set.

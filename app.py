@@ -8,13 +8,13 @@ import pandas as pd
 import streamlit as st
 from dotenv import load_dotenv
 
-from scripts.generate_answer import generate_grounded_answer
-from scripts.hybrid_search import (
+from scripts.formatting import (
     format_filter_value,
     format_release_year,
-    is_free_value,
-    search_games,
 )
+from scripts.generate_answer import generate_grounded_answer
+from scripts.query_filters import is_free_value
+from scripts.search import search_games
 
 
 load_dotenv()
