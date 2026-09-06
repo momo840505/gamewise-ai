@@ -12,7 +12,7 @@ GameWise understands your budget, platform, review requirements, release year, p
 ![Python](https://img.shields.io/badge/Python-3.13-3776AB?logo=python&logoColor=white)
 ![Streamlit](https://img.shields.io/badge/Streamlit-Interactive%20Application-FF4B4B?logo=streamlit&logoColor=white)
 ![Sentence Transformers](https://img.shields.io/badge/Embeddings-all--MiniLM--L6--v2-6F52ED)
-![Tests](https://img.shields.io/badge/tests-24%20passed-2EA44F)
+![Tests](https://img.shields.io/badge/tests-25%20passed-2EA44F)
 ![Evaluation](https://img.shields.io/badge/evaluation-11%2F11%20passed-2EA44F)
 
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-Open%20GameWise-FF4B4B?logo=streamlit&logoColor=white)](https://gamewise-ai.streamlit.app)
@@ -529,7 +529,7 @@ The retrieval pipeline was evaluated using 11 representative scenarios:
 | Valid-title rate | **100%** |
 | Duplicate-free rate | **100%** |
 | Metadata-term relevance@5 | **100%** |
-| Automated tests | **24 passed** |
+| Automated tests | **25 passed** |
 
 ### Metric definitions
 
@@ -577,7 +577,7 @@ evaluation/evaluation_summary.md
 
 ## 🧪 Automated Testing
 
-The project currently contains 24 automated tests.
+The project currently contains 25 automated tests.
 
 The tests cover:
 
@@ -590,6 +590,11 @@ The tests cover:
   `platform: Windows` filter
 - Release-year filtering
 - Official co-op filtering
+- Play-mode detection ignoring known ambiguous substrings
+  (`test_play_mode_ignores_known_ambiguous_substrings`) -- added after a
+  real bug where the English word `"coop"` (as in "chicken coop") and
+  the Chinese multiplayer keyword `"多人"` (as the tail of `"很多人"`,
+  "a lot of people") silently added an unrequested `play_mode` filter
 - Clarification behaviour
 - Invalid game-name filtering
 - Embedding and metadata alignment
@@ -608,8 +613,8 @@ python -m pytest -q
 Expected result:
 
 ```text
-........................
-24 passed
+.........................
+25 passed
 ```
 
 ---
@@ -988,7 +993,8 @@ This avoids loading the Sentence Transformer model again for every search.
 - Metadata-term relevance is not a replacement for human relevance assessment.
 - The first semantic search may take longer while the model loads.
 - Search history and shortlist data currently exist only during the active Streamlit session.
-- The system currently focuses on English queries.
+- Traditional Chinese query support is a curated keyword dictionary (240+ terms) rather than full free-form Chinese language understanding, so unusual phrasing, Simplified-only slang, or dialectal variants may not be recognized.
+- A small number of keywords are inherently ambiguous in natural language (for example "coop" as in "chicken coop", or "多人" inside "很多人"/"a lot of people"). The known collisions are excluded, but this is a targeted mitigation, not a general solution.
 
 ---
 
@@ -1012,11 +1018,12 @@ This avoids loading the Sentence Transformer model again for every search.
 - [x] Add sorting and CSV export
 - [x] Add Developer mode
 - [x] Deploy the public Streamlit application
+- [x] Add Traditional Chinese query support
 
 ### Planned
 
 - [ ] Retrieve live Steam prices and availability
-- [ ] Add multilingual query support
+- [ ] Extend query support to additional languages beyond Traditional Chinese
 - [ ] Add persistent user profiles
 - [ ] Add persistent saved-game lists
 - [ ] Add collaborative-filtering signals
