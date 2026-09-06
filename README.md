@@ -66,22 +66,22 @@ No local installation is required. Enter a natural-language game request to expl
 
 ## ✨ Overview
 
-Finding a suitable Steam game can be difficult when a player has several preferences at the same time.
+I built this because Steam's own search kept losing half of what I actually wanted. I'd have three or four things in my head at once — budget, review score, whether it's co-op, roughly what genre — and typing all of that into the search bar either got ignored or watered down into a generic keyword match.
 
-For example:
+So the goal for GameWise was: take the whole sentence, keep every constraint I actually stated, and don't quietly drop any of them just because the semantic match "felt close enough."
+
+For example, if I type:
 
 > A cooperative survival game under $20 with at least 80% positive reviews.
 
-This request contains multiple requirements:
+that's really four separate requirements at once:
 
 - The game must cost no more than `$20`
 - The game must have at least `80%` positive reviews
 - The game must officially support `co-op`
 - The game should strongly relate to the `survival` concept
 
-A normal keyword search may understand only part of the request.
-
-GameWise processes the complete query using:
+A plain keyword search tends to catch one or two of those and lose the rest. GameWise processes the complete query using:
 
 1. Natural-language query interpretation
 2. Structured hard filtering
@@ -94,9 +94,9 @@ GameWise processes the complete query using:
 
 ---
 
-## 🎯 Project Objectives
+## 🎯 What I Was Aiming For
 
-GameWise was designed to:
+Going in, I cared about a specific list of things:
 
 - Understand natural-language game requests
 - Preserve strict user requirements
@@ -934,13 +934,11 @@ gamewise-ai/
 
 ---
 
-## 🧭 Important Design Decisions
+## 🧭 Design Decisions (and why I made them)
 
-### Hard filters are applied before ranking
+### Hard filters win, no matter how good the semantic match looks
 
-Explicit requirements are treated as mandatory.
-
-A high semantic score cannot override:
+Early on I let semantic similarity have too much influence, and it would occasionally surface a great-looking game that quietly broke a requirement (over budget, wrong platform). That felt worse than returning fewer results, so now explicit requirements are treated as mandatory -- a high semantic score can never override:
 
 - Price
 - Review threshold
@@ -951,31 +949,27 @@ A high semantic score cannot override:
 
 ---
 
-### Official categories are used for play mode
+### Play mode is checked against Steam's own categories, not community tags
 
-Single-player, co-op, multiplayer, and PvP support are verified using official Steam categories.
-
-Community tags may contain noise and are not used as the main play-mode authority.
+Community tags are crowd-sourced and noisy -- I saw plenty of single-player games tagged "Multiplayer" by mistake. So single-player, co-op, multiplayer, and PvP support are verified using Steam's official categories instead, and tags are only used as a secondary signal.
 
 ---
 
-### Description text is weak evidence
+### Description text only counts as weak evidence
 
-Game descriptions provide useful context, but incidental words should not receive the same score as explicit genres or tags.
-
----
-
-### No-result behaviour is transparent
-
-GameWise reports that no game satisfies all conditions instead of silently relaxing the user's requirements.
+A word showing up once in a game's description shouldn't score the same as it showing up as an actual genre or tag -- otherwise a survival horror game that mentions "puzzle elements" in passing starts competing with an actual puzzle game.
 
 ---
 
-### Explainability is included by default
+### If nothing matches, GameWise says so instead of quietly loosening the query
 
-Normal users see clear matching reasons.
+I'd rather show "no result" than silently drop the review-score requirement or swap co-op for multiplayer just to have something to display. That kind of silent substitution is exactly the sort of thing that erodes trust in a recommender.
 
-Technical users can enable Developer mode to inspect:
+---
+
+### Explainability isn't an afterthought
+
+Every recommendation shows why it matched, and Developer mode exposes the raw numbers behind that decision for anyone who wants to dig in:
 
 - Hybrid score
 - Semantic score
@@ -985,11 +979,21 @@ Technical users can enable Developer mode to inspect:
 
 ---
 
-### Expensive resources are cached
+### The embedding model and search data load once per process
 
-The embedding model and search data are loaded once per Python process.
+Loading the Sentence Transformer model is the slow part, so it's cached and only paid for once instead of on every search.
 
-This avoids loading the Sentence Transformer model again for every search.
+---
+
+## 📝 Notes From Building This
+
+A few things worth being upfront about, since they came up while actually building and reviewing this project rather than being planned from the start:
+
+**The same bug kept reappearing in slightly different clothes.** The platform filter, the free-game filter, and the play-mode filter all independently had the same underlying problem: Python's `re` module treats CJK characters as word characters, so a plain `\b` boundary silently fails right at the point where an English keyword touches Chinese text with no space (`支援Mac`, `限定free方案`). I fixed it three separate times before I noticed it was the same bug each time, which is itself a useful lesson -- a targeted patch in one place doesn't protect the next place the same pattern shows up. There's a related but genuinely different flavor of the same problem in play-mode detection: "coop" is also the English word for a chicken enclosure, and "多人" (multiplayer) is also just the tail end of "很多人" (a lot of people). Those aren't boundary bugs, they're real ambiguity in natural language, so I excluded the specific known collisions rather than pretending there's a clean general fix.
+
+**`scripts/hybrid_search.py` used to be one 2,600+ line file** covering query parsing, ranking, data loading, and CLI formatting all at once. It worked, but it wasn't something I'd want to hand a reviewer and say "start here." It's now split into `text_utils.py`, `query_filters.py`, `ranking.py`, `search.py`, and `formatting.py`, each with one job.
+
+**The evaluation metrics measure correctness, not ranking quality.** See the note in the [Evaluation](#-evaluation) section -- I'd rather say that plainly than let a 100% badge imply more than it actually proves.
 
 ---
 
